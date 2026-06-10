@@ -58,6 +58,11 @@ h1, h2, h3 { font-family: 'Orbitron', sans-serif !important; letter-spacing: 1px
     background: linear-gradient(90deg, #00ffb2, #00aaff);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .hero p { margin: 6px 0 0; color: #8fa6bd; font-size: 1.02rem; }
+.hero .byline {
+    font-family: 'Orbitron'; font-size: .82rem; letter-spacing: 2.5px;
+    color: #ffd84d; margin-top: 10px; text-transform: uppercase;
+    text-shadow: 0 0 14px rgba(255,216,77,.35);
+}
 
 /* ---- stat strip ---- */
 .stats { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
@@ -209,6 +214,60 @@ img.flag.sm { width: 21px; height: 15px; }
 .kv { color:#8fa6bd; font-size:.92rem; }
 .kv b { color:#e8f1fa; }
 .foot { text-align:center; color:#51677e; margin-top:28px; font-size:.9rem; }
+
+/* ---- responsive: tablet (iPad portrait & below) ---- */
+.tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.wc-table { min-width: 560px; }
+@media (max-width: 1024px) {
+    .block-container { padding-left: 1rem; padding-right: 1rem; }
+    .stat { min-width: 150px; }
+}
+
+/* ---- responsive: phones ---- */
+@media (max-width: 740px) {
+    .hero { padding: 18px 18px; }
+    .hero h1 { font-size: 1.45rem; }
+    .hero p { font-size: .92rem; }
+    .hero .byline { font-size: .66rem; letter-spacing: 1.6px; }
+
+    .stats { gap: 8px; }
+    .stat { min-width: calc(50% - 8px); flex: 1 1 calc(50% - 8px);
+        padding: 11px 13px; }
+    .stat .val { font-size: 1.2rem; }
+
+    .glass { padding: 14px 14px; }
+    .sec-h { font-size: 1.05rem; }
+
+    /* match card: teams+score on row 1, meta centered below */
+    .match-card { grid-template-columns: 1fr auto 1fr; gap: 8px;
+        padding: 11px 13px; }
+    .mc-team { font-size: .98rem; }
+    .mc-score { font-size: 1.15rem; min-width: 64px; }
+    .mc-meta { grid-column: 1 / -1; text-align: center; font-size: .8rem;
+        border-top: 1px solid rgba(255,255,255,.06); padding-top: 6px; }
+
+    /* odds rows: tighter columns */
+    .odds-rank { min-width: 30px; font-size: .75rem; }
+    .odds-team { min-width: 116px; font-size: .92rem; }
+    .odds-bar-bg { margin: 0 7px; min-width: 40px; }
+    .odds-pct { min-width: 48px; font-size: .82rem; }
+
+    .big-pick .team { font-size: 1.45rem; }
+    .big-pick .team img.flag { width: 30px; height: 22px; }
+    .podium { flex-wrap: wrap; }
+    .pod { min-width: calc(33% - 10px); padding: 10px 5px; }
+    .pod .nm { font-size: .85rem; }
+    .pod .pc { font-size: .95rem; }
+
+    img.flag { width: 22px; height: 16px; }
+    img.flag.sm { width: 18px; height: 13px; }
+}
+
+@media (max-width: 420px) {
+    .hero h1 { font-size: 1.25rem; }
+    .stat .val { font-size: 1.05rem; }
+    .mc-team { font-size: .88rem; }
+}
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -382,7 +441,9 @@ def hero():
         <p>Autonomous World Cup 2026 intelligence — live scores · standings ·
         AI winner projection · prediction-market odds &nbsp;|&nbsp;
         {flag('USA', True)} {flag('Mexico', True)} {flag('Canada', True)}
-        United 2026 &nbsp;·&nbsp; last sync {now}</p></div>""",
+        United 2026 &nbsp;·&nbsp; last sync {now}</p>
+        <div class="byline">★ David Lau World Cup Vision // WC26 AI Agent
+        Supportive ★</div></div>""",
         unsafe_allow_html=True)
 
 
@@ -538,7 +599,7 @@ def standings_table_html(table: list) -> str:
                  f'<td>{r["goalsFor"]}</td><td>{r["goalsAgainst"]}</td>'
                  f'<td>{r["goalDifference"]:+d}</td>'
                  f'<td class="pts">{r["points"]}</td></tr>')
-    return (f'<div class="glass" style="padding:10px 14px;">'
+    return (f'<div class="glass tbl-scroll" style="padding:10px 14px;">'
             f'<table class="wc-table"><thead><tr>'
             f'<th>#</th><th class="l">Team</th><th>P</th><th>W</th><th>D</th>'
             f'<th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th>'
