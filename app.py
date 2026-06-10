@@ -17,6 +17,7 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ----------------------------------------------------------------------------
 # Page config
@@ -426,6 +427,166 @@ def blended_prediction(odds: list, strength: dict) -> list:
 
 
 # ----------------------------------------------------------------------------
+# System-flow animation (embedded, plays inside an iframe component)
+# ----------------------------------------------------------------------------
+ANIM_HTML = """
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent;color:#d7e4f2;font-family:'Noto Sans TC',sans-serif;
+display:flex;flex-direction:column;align-items:center;overflow:hidden}
+.cap{font-size:1rem;color:#ffd84d;min-height:1.6em;margin:4px 0 10px;
+text-align:center;font-weight:500;transition:opacity .4s;
+text-shadow:0 0 14px rgba(255,216,77,.3)}
+svg{width:100%;max-width:860px;height:auto}
+.node{fill:rgba(255,255,255,.03);stroke:rgba(255,255,255,.14);stroke-width:1.2;
+transition:stroke .4s,filter .4s}
+.node.on{stroke:#00ffb2;filter:drop-shadow(0 0 10px rgba(0,255,178,.5))}
+.node.gold.on{stroke:#ffd84d;filter:drop-shadow(0 0 12px rgba(255,216,77,.55))}
+.nlabel{font-family:'Orbitron';font-size:11px;fill:#00ffb2;letter-spacing:2px}
+.ntext{font-size:13px;fill:#d7e4f2;font-weight:700}
+.nsub{font-size:10.5px;fill:#7d93ab}
+.pipe{fill:none;stroke:rgba(0,170,255,.22);stroke-width:2}
+.dot{fill:#00ffb2;filter:drop-shadow(0 0 6px #00ffb2)}
+.dot.blue{fill:#00aaff;filter:drop-shadow(0 0 6px #00aaff)}
+.dot.gold{fill:#ffd84d;filter:drop-shadow(0 0 6px #ffd84d)}
+.scoreTxt{font-family:'Orbitron';font-size:17px;fill:#00ffb2}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.liveDot{fill:#ff3b5c;animation:pulse 1.4s infinite}
+.barbg{fill:rgba(255,255,255,.07)}
+.bar{fill:#00d4a8}
+.legend{display:flex;gap:16px;margin-top:6px;flex-wrap:wrap;
+justify-content:center;color:#7d93ab;font-size:.82rem}
+.chip{display:inline-block;width:9px;height:9px;border-radius:50%;
+margin-right:4px;vertical-align:-1px}
+button{background:rgba(0,255,178,.08);color:#00ffb2;margin-top:8px;
+border:1px solid rgba(0,255,178,.4);border-radius:999px;padding:5px 18px;
+font-family:'Orbitron';font-size:.72rem;letter-spacing:2px;cursor:pointer}
+@media(max-width:600px){.cap{font-size:.82rem}}
+</style></head><body>
+<div class="cap" id="caption">準備開賽…</div>
+<svg viewBox="0 0 860 520" xmlns="http://www.w3.org/2000/svg">
+<g id="nodeFD"><rect class="node" x="30" y="50" width="200" height="92" rx="14"/>
+<text class="nlabel" x="50" y="78">DATA SOURCE 01</text>
+<text class="ntext" x="50" y="102">football-data.org</text>
+<text class="nsub" x="50" y="122">即時比分・賽程・12 組積分榜</text></g>
+<g id="nodePM"><rect class="node" x="30" y="290" width="200" height="92" rx="14"/>
+<text class="nlabel" x="50" y="318">DATA SOURCE 02</text>
+<text class="ntext" x="50" y="342">Polymarket 預測市場</text>
+<text class="nsub" x="50" y="362">群眾下注 → 各隊奪冠機率</text></g>
+<g id="nodeAI"><rect class="node gold" x="330" y="160" width="210" height="150" rx="16"/>
+<text class="nlabel" x="352" y="190" fill="#ffd84d">AI AGENT CORE</text>
+<text class="ntext" x="352" y="216">🤖 預測引擎</text>
+<text class="nsub" x="352" y="238">市場賠率 60%</text>
+<rect class="barbg" x="352" y="246" width="166" height="8" rx="4"/>
+<rect class="bar" id="bar60" x="352" y="246" width="0" height="8" rx="4"/>
+<text class="nsub" x="352" y="274">即時戰績 40%</text>
+<rect class="barbg" x="352" y="282" width="166" height="8" rx="4"/>
+<rect class="bar" id="bar40" x="352" y="282" width="0" height="8" rx="4"/></g>
+<g id="nodeLive"><rect class="node" x="630" y="20" width="200" height="100" rx="14"/>
+<text class="nlabel" x="650" y="48">LIVE</text><circle class="liveDot" cx="700" cy="44" r="4"/>
+<text class="ntext" x="650" y="74">🔴 即時比分</text>
+<text class="scoreTxt" id="score" x="650" y="102">MEX 0 : 0 KOR</text></g>
+<g id="nodeTable"><rect class="node" x="630" y="150" width="200" height="80" rx="14"/>
+<text class="nlabel" x="650" y="178">STANDINGS</text>
+<text class="ntext" x="650" y="202">📊 12 組積分榜</text>
+<text class="nsub" x="650" y="220">前 2 晉級・第 3 名待定</text></g>
+<g id="nodePick"><rect class="node gold" x="630" y="260" width="200" height="100" rx="14"/>
+<text class="nlabel" x="650" y="288" fill="#ffd84d">AI PROJECTION</text>
+<text class="ntext" x="650" y="314">🏆 奪冠預測</text>
+<text class="scoreTxt" id="pick" x="650" y="342" fill="#ffd84d">— —</text></g>
+<g id="nodeOdds"><rect class="node" x="630" y="390" width="200" height="86" rx="14"/>
+<text class="nlabel" x="650" y="418">MARKET ODDS</text>
+<text class="ntext" x="650" y="442">💸 群眾賠率排行</text>
+<rect class="barbg" x="650" y="452" width="160" height="7" rx="3"/>
+<rect class="bar" id="oddsBar" x="650" y="452" width="0" height="7" rx="3"/></g>
+<path class="pipe" id="p1" d="M 230 96 C 290 96, 290 200, 330 208"/>
+<path class="pipe" id="p2" d="M 230 336 C 290 336, 290 280, 330 272"/>
+<path class="pipe" id="p3" d="M 540 190 C 590 170, 590 80, 630 70"/>
+<path class="pipe" id="p4" d="M 540 220 C 590 210, 590 190, 630 190"/>
+<path class="pipe" id="p5" d="M 540 250 C 590 270, 590 310, 630 310"/>
+<path class="pipe" id="p6" d="M 540 280 C 590 320, 590 433, 630 433"/>
+<circle class="dot" r="4"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#p1"/></animateMotion></circle>
+<circle class="dot" r="4"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite"><mpath href="#p1"/></animateMotion></circle>
+<circle class="dot blue" r="4"><animateMotion dur="2.8s" repeatCount="indefinite"><mpath href="#p2"/></animateMotion></circle>
+<circle class="dot blue" r="4"><animateMotion dur="2.8s" begin="1.4s" repeatCount="indefinite"><mpath href="#p2"/></animateMotion></circle>
+<circle class="dot gold" r="4"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#p3"/></animateMotion></circle>
+<circle class="dot gold" r="4"><animateMotion dur="2.5s" begin=".6s" repeatCount="indefinite"><mpath href="#p4"/></animateMotion></circle>
+<circle class="dot gold" r="4"><animateMotion dur="2.3s" begin=".3s" repeatCount="indefinite"><mpath href="#p5"/></animateMotion></circle>
+<circle class="dot gold" r="4"><animateMotion dur="2.6s" begin=".9s" repeatCount="indefinite"><mpath href="#p6"/></animateMotion></circle>
+<g transform="translate(430, 470)">
+<circle r="28" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="5"/>
+<circle id="timer" r="28" fill="none" stroke="#00ffb2" stroke-width="5"
+stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="175.9" transform="rotate(-90)"/>
+<text x="0" y="-1" text-anchor="middle" class="scoreTxt" id="timerTxt" font-size="13">60s</text>
+<text x="0" y="15" text-anchor="middle" class="nsub" font-size="9">自動更新</text></g>
+</svg>
+<div class="legend">
+<span><span class="chip" style="background:#00ffb2"></span>比分資料</span>
+<span><span class="chip" style="background:#00aaff"></span>市場賠率</span>
+<span><span class="chip" style="background:#ffd84d"></span>AI 運算結果</span>
+<button id="replay">↻ REPLAY</button></div>
+<script>
+const captions=[
+"第 1 步:每 60 秒向 football-data.org 抓取即時比分與積分榜",
+"第 2 步:同時讀取 Polymarket — 全球玩家用真金白銀投出的奪冠機率",
+"第 3 步:AI 引擎混合運算 — 市場賠率 60% + 即時戰績 40%",
+"第 4 步:結果送進儀表板 — 比分、積分榜、奪冠預測、賠率排行",
+"進球了!比分即時跳動,AI 預測也跟著重新計算 ⚽"];
+const picks=["🇪🇸 SPAIN 16%","🇫🇷 FRANCE 16%","🇪🇸 SPAIN 16%"];
+const scores=["MEX 0 : 0 KOR","MEX 1 : 0 KOR","MEX 1 : 1 KOR","MEX 2 : 1 KOR"];
+const cap=document.getElementById('caption');
+const nodes={fd:document.querySelector('#nodeFD .node'),
+pm:document.querySelector('#nodePM .node'),ai:document.querySelector('#nodeAI .node'),
+live:document.querySelector('#nodeLive .node'),table:document.querySelector('#nodeTable .node'),
+pick:document.querySelector('#nodePick .node'),odds:document.querySelector('#nodeOdds .node')};
+let timers=[];
+function setCap(t){cap.style.opacity=0;
+setTimeout(()=>{cap.textContent=t;cap.style.opacity=1;},300);}
+function on(...ks){ks.forEach(k=>nodes[k].classList.add('on'));}
+function offAll(){Object.values(nodes).forEach(n=>n.classList.remove('on'));}
+function grow(id,w,delay){timers.push(setTimeout(()=>{
+document.getElementById(id).setAttribute('width',w);},delay));}
+function play(){
+timers.forEach(clearTimeout);timers=[];offAll();
+document.getElementById('score').textContent=scores[0];
+document.getElementById('pick').textContent='— —';
+['bar60','bar40','oddsBar'].forEach(id=>
+document.getElementById(id).setAttribute('width',0));
+timers.push(setTimeout(()=>{setCap(captions[0]);on('fd');},200));
+timers.push(setTimeout(()=>{setCap(captions[1]);on('pm');},3200));
+timers.push(setTimeout(()=>{setCap(captions[2]);on('ai');
+grow('bar60',166,200);grow('bar40',110,700);},6200));
+timers.push(setTimeout(()=>{setCap(captions[3]);
+on('live','table','pick','odds');
+document.getElementById('pick').textContent=picks[0];
+grow('oddsBar',160,300);},9400));
+scores.slice(1).forEach((s,i)=>timers.push(setTimeout(()=>{
+setCap(captions[4]);
+document.getElementById('score').textContent=s;
+document.getElementById('pick').textContent=picks[(i+1)%picks.length];
+},12800+i*2600)));
+timers.push(setTimeout(play,12800+3*2600+2000));}
+const ring=document.getElementById('timer'),ttxt=document.getElementById('timerTxt');
+let t0=Date.now();
+setInterval(()=>{const el=((Date.now()-t0)/6000)%1;
+ring.setAttribute('stroke-dashoffset',175.9*(1-el));
+ttxt.textContent=Math.ceil(60*(1-el))+'s';},50);
+document.getElementById('replay').onclick=play;
+play();
+</script></body></html>
+"""
+
+
+def flow_panel():
+    st.markdown('<span class="section-tag">SYSTEM FLOW</span>'
+                '<div class="sec-h">🎬 Agent 運作流程 — How it works</div>',
+                unsafe_allow_html=True)
+    components.html(ANIM_HTML, height=560, scrolling=False)
+
+
+# ----------------------------------------------------------------------------
 # UI sections
 # ----------------------------------------------------------------------------
 def section(tag: str, title: str, live: bool = False):
@@ -697,4 +858,5 @@ def dashboard():
 
 
 hero()
+flow_panel()
 dashboard()
