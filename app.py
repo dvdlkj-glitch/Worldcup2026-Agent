@@ -335,6 +335,26 @@ def get_api_key() -> str:
 
 
 # ----------------------------------------------------------------------------
+# Visitor counter (counterapi.dev — free, no key, persists across redeploys)
+# ----------------------------------------------------------------------------
+VISIT_API = "https://api.counterapi.dev/v1/wc26-agent-davidlau/visits"
+
+
+def visitor_count():
+    """Count once per browser session; afterwards read-only. None on failure."""
+    try:
+        if not st.session_state.get("_visit_counted"):
+            r = requests.get(f"{VISIT_API}/up", timeout=6)
+            st.session_state["_visit_counted"] = True
+        else:
+            r = requests.get(VISIT_API, timeout=6)
+        r.raise_for_status()
+        return int(r.json().get("count", 0))
+    except Exception:
+        return None
+
+
+# ----------------------------------------------------------------------------
 # Data fetchers (cached)
 # ----------------------------------------------------------------------------
 @st.cache_data(ttl=60, show_spinner=False)
@@ -597,12 +617,15 @@ def section(tag: str, title: str, live: bool = False):
 
 def hero():
     now = datetime.now(timezone.utc).strftime("%d %b %Y · %H:%M UTC")
+    visits = visitor_count()
+    vbadge = (f' &nbsp;·&nbsp; <span style="color:#00ffb2">👥 '
+              f'{visits:,} visits</span>' if visits else "")
     st.markdown(
         f"""<div class="hero"><h1>⚽ WC26 // AGENT</h1>
         <p>Autonomous World Cup 2026 intelligence — live scores · standings ·
         AI winner projection · prediction-market odds &nbsp;|&nbsp;
         {flag('USA', True)} {flag('Mexico', True)} {flag('Canada', True)}
-        United 2026 &nbsp;·&nbsp; last sync {now}</p>
+        United 2026 &nbsp;·&nbsp; last sync {now}{vbadge}</p>
         <div class="byline">★ David Lau World Cup Vision // WC26 AI Agent
         Supportive ★</div></div>""",
         unsafe_allow_html=True)
