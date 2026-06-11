@@ -804,6 +804,201 @@ tick(); setInterval(tick, 1000);
 </script></body></html>
 """
 
+# ----------------------------------------------------------------------------
+# Tactical preview animation (style-profile simulation, not real pass data)
+# ----------------------------------------------------------------------------
+TACTICS = {
+    "Spain": ("4-3-3", "possession"), "France": ("4-2-3-1", "counter"),
+    "England": ("4-2-3-1", "possession"), "Portugal": ("4-3-3", "wing"),
+    "Argentina": ("4-3-3", "possession"), "Brazil": ("4-2-3-1", "wing"),
+    "Germany": ("4-2-3-1", "press"), "Netherlands": ("4-3-3", "press"),
+    "Italy": ("4-3-3", "possession"), "Belgium": ("4-2-3-1", "counter"),
+    "Croatia": ("4-3-3", "possession"), "Mexico": ("4-3-3", "press"),
+    "USA": ("4-3-3", "press"), "United States": ("4-3-3", "press"),
+    "Canada": ("4-4-2", "counter"), "Japan": ("4-2-3-1", "counter"),
+    "South Korea": ("4-4-2", "counter"), "Korea Republic": ("4-4-2", "counter"),
+    "Morocco": ("4-3-3", "counter"), "Senegal": ("4-3-3", "counter"),
+    "Uruguay": ("4-4-2", "press"), "Colombia": ("4-3-3", "wing"),
+    "Switzerland": ("4-2-3-1", "counter"), "Denmark": ("4-3-3", "possession"),
+    "Norway": ("4-4-2", "counter"), "Australia": ("4-4-2", "counter"),
+}
+DEFAULT_TACTIC = ("4-4-2", "counter")
+
+# formation coordinates (x 0-100 left→right, y 0-100 top→bottom)
+F_ATT = {
+    "4-3-3": [(4, 50), (18, 15), (18, 38), (18, 62), (18, 85),
+              (38, 30), (38, 50), (38, 70), (60, 20), (63, 50), (60, 80)],
+    "4-2-3-1": [(4, 50), (18, 15), (18, 38), (18, 62), (18, 85),
+                (33, 38), (33, 62), (48, 22), (48, 50), (48, 78), (63, 50)],
+    "4-4-2": [(4, 50), (18, 15), (18, 38), (18, 62), (18, 85),
+              (38, 20), (38, 42), (38, 58), (38, 80), (60, 40), (60, 60)],
+}
+F_DEF = {
+    "low": [(96, 50), (84, 18), (84, 34), (84, 50), (84, 66), (84, 82),
+            (73, 28), (73, 44), (73, 60), (73, 76), (60, 50)],
+    "mid": [(96, 50), (82, 20), (82, 40), (82, 60), (82, 80),
+            (69, 25), (69, 45), (69, 62), (69, 80), (57, 42), (57, 58)],
+}
+# attacking ball routes per style: [x, y, segment_ms]
+SEQS = {
+    "possession": [[4, 50, 900], [18, 38, 900], [38, 50, 1000], [38, 30, 900],
+                   [38, 70, 900], [48, 56, 900], [63, 50, 800], [78, 38, 700],
+                   [92, 47, 600]],
+    "wing": [[18, 38, 800], [18, 85, 900], [45, 88, 900], [68, 90, 800],
+             [80, 86, 700], [86, 62, 600], [78, 50, 550], [93, 48, 500]],
+    "counter": [[30, 55, 600], [48, 60, 550], [70, 18, 750], [82, 24, 600],
+                [87, 42, 550], [93, 49, 450]],
+    "press": [[60, 40, 650], [52, 30, 550], [40, 45, 650], [55, 60, 650],
+              [70, 65, 750], [83, 55, 650], [92, 49, 500]],
+}
+STYLE_LBL = {
+    "possession": ("控球組織", "Possession build-up"),
+    "wing": ("邊路進攻", "Wing play"),
+    "counter": ("防守反擊", "Counter-attack"),
+    "press": ("高位逼搶", "High press"),
+}
+BLOCK_LBL = {"low": ("低位防守 5-4-1", "Low block 5-4-1"),
+             "mid": ("中場壓縮 4-4-2", "Mid block 4-4-2")}
+
+TACTICS_HTML = """
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent;color:#d7e4f2;font-family:'Noto Sans TC',sans-serif;
+display:flex;flex-direction:column;align-items:center;overflow:hidden}
+.hd{display:flex;gap:14px;align-items:center;justify-content:center;
+flex-wrap:wrap;margin-bottom:6px;font-size:.92rem}
+.side{display:flex;gap:6px;align-items:center;font-weight:700}
+.tag{font-family:'Orbitron','Noto Sans TC';font-size:.66rem;letter-spacing:1.5px;
+border-radius:999px;padding:2px 10px}
+.tA{color:#ffd84d;border:1px solid rgba(255,216,77,.45)}
+.tD{color:#00aaff;border:1px solid rgba(0,170,255,.45)}
+img.fl{width:22px;height:16px;border-radius:3px;vertical-align:-3px;
+border:1px solid rgba(255,255,255,.2)}
+.desc{color:#8fa6bd;font-size:.85rem;text-align:center;margin-bottom:6px}
+svg{width:100%;max-width:760px;height:auto}
+.pl{filter:drop-shadow(0 0 5px rgba(255,216,77,.6))}
+.pd{filter:drop-shadow(0 0 5px rgba(0,170,255,.55))}
+.shot{font-family:'Orbitron';font-size:26px;fill:#ffd84d;opacity:0;
+text-shadow:0 0 18px rgba(255,216,77,.6)}
+.note{color:#51677e;font-size:.74rem;margin-top:4px;text-align:center}
+@media(max-width:600px){.hd{font-size:.8rem}.desc{font-size:.76rem}}
+</style></head><body>
+<div class="hd">
+  <span class="side">__HFLAG__ __HOME__</span>
+  <span class="tag tA">__ATT_TAG__</span>
+  <span style="color:#4f9fd8;font-family:'Orbitron'">VS</span>
+  <span class="tag tD">__DEF_TAG__</span>
+  <span class="side">__AFLAG__ __AWAY__</span>
+</div>
+<div class="desc">__DESC__</div>
+<svg viewBox="0 0 700 440" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="10" width="680" height="420" rx="8" fill="rgba(0,255,178,.025)"
+        stroke="rgba(0,255,178,.25)" stroke-width="1.5"/>
+  <line x1="350" y1="10" x2="350" y2="430" stroke="rgba(0,255,178,.2)" stroke-width="1.5"/>
+  <circle cx="350" cy="220" r="56" fill="none" stroke="rgba(0,255,178,.2)" stroke-width="1.5"/>
+  <rect x="10" y="130" width="86" height="180" fill="none" stroke="rgba(0,255,178,.2)" stroke-width="1.5"/>
+  <rect x="604" y="130" width="86" height="180" fill="none" stroke="rgba(0,255,178,.2)" stroke-width="1.5"/>
+  <rect x="4" y="185" width="6" height="70" fill="rgba(0,255,178,.35)"/>
+  <rect x="690" y="185" width="6" height="70" fill="rgba(0,255,178,.35)"/>
+  <g id="defG"></g>
+  <g id="attG"></g>
+  <circle id="ball" r="6" fill="#ffffff" stroke="#070b12" stroke-width="1.5"
+          filter="drop-shadow(0 0 7px #fff)"/>
+  <text id="shot" class="shot" x="560" y="150" text-anchor="middle">__SHOTLBL__</text>
+</svg>
+<div class="note">__NOTE__</div>
+<script>
+var ATT=__ATT__, DEF=__DEF__, SEQ=__SEQ__;
+function px(x){return 10+x*6.8;} function py(y){return 10+y*4.2;}
+var NS="http://www.w3.org/2000/svg";
+var attG=document.getElementById('attG'), defG=document.getElementById('defG');
+var defDots=[];
+ATT.forEach(function(p){
+  var c=document.createElementNS(NS,'circle');
+  c.setAttribute('cx',px(p[0]));c.setAttribute('cy',py(p[1]));
+  c.setAttribute('r',8);c.setAttribute('fill','#ffd84d');c.setAttribute('class','pl');
+  attG.appendChild(c);});
+DEF.forEach(function(p){
+  var c=document.createElementNS(NS,'circle');
+  c.setAttribute('cx',px(p[0]));c.setAttribute('cy',py(p[1]));
+  c.setAttribute('r',8);c.setAttribute('fill','#00aaff');c.setAttribute('class','pd');
+  c.dataset.ox=p[0];c.dataset.oy=p[1];
+  defG.appendChild(c);defDots.push(c);});
+var ball=document.getElementById('ball'), shot=document.getElementById('shot');
+var seg=0, t0=null, from=SEQ[0];
+ball.setAttribute('cx',px(from[0]));ball.setAttribute('cy',py(from[1]));
+function frame(ts){
+  if(seg>=SEQ.length-1){ // shot flash then restart
+    shot.style.opacity=1;
+    setTimeout(function(){shot.style.opacity=0;seg=0;t0=null;
+      requestAnimationFrame(frame);},1300);
+    return;}
+  if(!t0)t0=ts;
+  var a=SEQ[seg], b=SEQ[seg+1], dur=b[2];
+  var k=Math.min((ts-t0)/dur,1);
+  var x=a[0]+(b[0]-a[0])*k, y=a[1]+(b[1]-a[1])*k;
+  ball.setAttribute('cx',px(x));ball.setAttribute('cy',py(y));
+  // defensive block shifts toward the ball
+  defDots.forEach(function(c){
+    var ox=+c.dataset.ox, oy=+c.dataset.oy;
+    c.setAttribute('cx',px(ox+(x-50)*0.06));
+    c.setAttribute('cy',py(oy+(y-50)*0.18));});
+  if(k>=1){seg++;t0=null;}
+  requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+</script></body></html>
+"""
+
+
+def tactics_panel(nxt: dict, odds_map: dict):
+    zh = st.session_state.get("lang", "中文") == "中文"
+    home, away = nxt["homeTeam"]["name"], nxt["awayTeam"]["name"]
+
+    def o(team):
+        if team in odds_map:
+            return odds_map[team]
+        tl = team.lower()
+        for k, v in odds_map.items():
+            if tl in k.lower() or k.lower() in tl:
+                return v
+        return 0.005
+
+    fav, dog = (home, away) if o(home) >= o(away) else (away, home)
+    form, style = TACTICS.get(fav, DEFAULT_TACTIC)
+    dog_style = TACTICS.get(dog, DEFAULT_TACTIC)[1]
+    block = "low" if dog_style == "counter" else "mid"
+    i = 0 if zh else 1
+    s_lbl, b_lbl = STYLE_LBL[style][i], BLOCK_LBL[block][i]
+    if zh:
+        title = "⚔️ 戰術預演 — 下一場"
+        desc = (f"預期 {fav} 以「{s_lbl}」主導進攻（{form}）；"
+                f"{dog} 退守「{b_lbl}」，伺機反擊。")
+        note = ("⚠️ 此為基於球隊風格檔案的戰術模擬動畫，非真實傳球數據，僅供趣味參考。")
+        shotlbl = "射門！"
+    else:
+        title = "⚔️ Tactical preview — next match"
+        desc = (f"Expect {fav} to attack via {s_lbl} ({form}); "
+                f"{dog} defends in a {b_lbl}, looking to break.")
+        note = ("⚠️ Style-profile simulation — not real pass data. "
+                "For fun & preview only.")
+        shotlbl = "SHOT!"
+    html = (TACTICS_HTML
+            .replace("__ATT__", json.dumps(F_ATT[form]))
+            .replace("__DEF__", json.dumps(F_DEF[block]))
+            .replace("__SEQ__", json.dumps(SEQS[style]))
+            .replace("__HOME__", fav).replace("__AWAY__", dog)
+            .replace("__HFLAG__", flag(fav, True))
+            .replace("__AFLAG__", flag(dog, True))
+            .replace("__ATT_TAG__", ("進攻 · " if zh else "ATT · ") + s_lbl)
+            .replace("__DEF_TAG__", ("防守 · " if zh else "DEF · ") + b_lbl)
+            .replace("__DESC__", desc).replace("__NOTE__", note)
+            .replace("__SHOTLBL__", shotlbl))
+    section("TACTICS SIM", title)
+    components.html(html, height=560, scrolling=False)
+
+
 # fallback: opening match — Mexico City, 11 Jun 2026 20:00 local (UTC-6)
 OPENING_UTC = "2026-06-12T02:00:00Z"
 
@@ -1142,6 +1337,8 @@ def dashboard():
 
     trend_panel(odds)
     next_match_panel(upcoming, odds_map)
+    if upcoming:
+        tactics_panel(upcoming[0], odds_map)
     standings_panel(standings)
 
     if finished:
