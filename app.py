@@ -222,6 +222,27 @@ div[role="radiogroup"] label:has(input:checked) p {
 .kv b { color:#e8f1fa; }
 .foot { text-align:center; color:#51677e; margin-top:28px; font-size:.9rem; }
 
+/* AI showdown row animations */
+.trophy {
+    display: inline-block;
+    animation: trophyPop .7s cubic-bezier(.2,1.6,.4,1) both,
+               trophyGlow 2.2s ease-in-out infinite .7s;
+}
+@keyframes trophyPop {
+    0% { transform: scale(0) rotate(-40deg); }
+    70% { transform: scale(1.35) rotate(10deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+@keyframes trophyGlow {
+    0%, 100% { filter: drop-shadow(0 0 2px rgba(255,216,77,.4)); }
+    50% { filter: drop-shadow(0 0 8px rgba(255,216,77,.9)); }
+}
+.ft-flash { animation: ftPulse 2.4s ease-in-out 2; }
+@keyframes ftPulse {
+    0%, 100% { text-shadow: 0 0 4px rgba(0,255,178,.3); }
+    50% { text-shadow: 0 0 16px rgba(0,255,178,.9); }
+}
+
 /* expander — keep dark on any base theme */
 [data-testid="stExpander"] {
     background: rgba(255,255,255,.03);
@@ -1743,6 +1764,81 @@ AI_MODELS = [("g", "Gemini", "🔷", "#4e8cff"),
              ("c", "ChatGPT", "🟢", "#10c98d"),
              ("a", "Claude", "⭐", "#ffb13d")]
 
+SHOWDOWN_HTML = """
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent;color:#d7e4f2;font-family:'Noto Sans TC',sans-serif;
+overflow:hidden;position:relative}
+.p{position:absolute;border-radius:50%;pointer-events:none;opacity:.5}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,-22px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-35px,18px)}}
+@keyframes drift3{0%,100%{transform:translate(0,0)}50%{transform:translate(22px,26px)}}
+.hdwrap{text-align:center;padding-top:6px}
+.tag{display:inline-block;font-family:'Orbitron','Noto Sans TC';font-size:.8rem;
+letter-spacing:3px;color:#ffd84d;border:1px solid rgba(255,216,77,.5);
+border-radius:999px;padding:5px 22px;
+animation:tagPulse 2.4s ease-in-out infinite}
+@keyframes tagPulse{0%,100%{box-shadow:0 0 10px rgba(255,216,77,.15)}
+50%{box-shadow:0 0 26px rgba(255,216,77,.5)}}
+.title{font-family:'Orbitron','Noto Sans TC';font-size:1.8rem;margin-top:10px;
+background:linear-gradient(90deg,#4e8cff,#10c98d,#ffb13d,#4e8cff);
+background-size:300% 100%;-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;animation:shimmer 6s linear infinite}
+@keyframes shimmer{0%{background-position:0% 0}100%{background-position:300% 0}}
+.sub{color:#8fa6bd;font-size:.95rem;margin:6px 0 16px}
+.cards{display:flex;gap:14px;justify-content:center;flex-wrap:nowrap;
+padding:0 8px 14px}
+.lbcard{flex:1;max-width:250px;min-width:170px;text-align:center;
+padding:18px 10px;border-radius:16px;background:rgba(10,18,30,.75);
+border:1.5px solid var(--c);opacity:0;
+animation:rise .7s cubic-bezier(.2,.8,.3,1.2) forwards,
+glow 3s ease-in-out infinite}
+@keyframes rise{from{opacity:0;transform:translateY(26px) scale(.92)}
+to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes glow{0%,100%{box-shadow:0 0 10px color-mix(in srgb,var(--c) 25%,transparent)}
+50%{box-shadow:0 0 28px color-mix(in srgb,var(--c) 55%,transparent)}}
+.nm{font-size:1.1rem;font-weight:700;color:var(--c)}
+.crown{display:inline-block;animation:bob 1.8s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-6deg)}
+50%{transform:translateY(-5px) rotate(8deg)}}
+.pts{font-family:'Orbitron';font-size:2.3rem;color:var(--c);margin:6px 0;
+text-shadow:0 0 16px color-mix(in srgb,var(--c) 60%,transparent)}
+.dl{color:#8fa6bd;font-size:.84rem}
+@media(max-width:680px){body{zoom:.78}}
+@media(max-width:520px){body{zoom:.62}}
+@media(max-width:400px){body{zoom:.5}}
+</style></head><body>
+<div class="p" style="width:5px;height:5px;background:#4e8cff;top:18%;left:6%;
+animation:drift1 7s ease-in-out infinite"></div>
+<div class="p" style="width:4px;height:4px;background:#10c98d;top:60%;left:14%;
+animation:drift2 9s ease-in-out infinite"></div>
+<div class="p" style="width:6px;height:6px;background:#ffb13d;top:30%;left:88%;
+animation:drift3 8s ease-in-out infinite"></div>
+<div class="p" style="width:4px;height:4px;background:#ffd84d;top:72%;left:80%;
+animation:drift1 10s ease-in-out infinite"></div>
+<div class="p" style="width:5px;height:5px;background:#00ffb2;top:8%;left:55%;
+animation:drift2 11s ease-in-out infinite"></div>
+<div class="hdwrap">
+  <span class="tag">🏆 AI SHOWDOWN</span>
+  <div class="title">__TITLE__</div>
+  <div class="sub">__SUB__</div>
+</div>
+<div class="cards">__CARDS__</div>
+<script>
+document.querySelectorAll('.pts').forEach(function(el){
+  var v=+el.dataset.v, t0=null;
+  function step(ts){
+    if(!t0)t0=ts;
+    var k=Math.min((ts-t0)/1400,1);
+    k=1-Math.pow(1-k,3);
+    el.textContent=Math.round(v*k);
+    if(k<1)requestAnimationFrame(step);}
+  requestAnimationFrame(step);});
+</script></body></html>
+"""
+
 # (home, away, gemini, chatgpt, claude)
 AI_PRED = {
  "A": [("Mexico", "South Africa", (2, 1), (2, 0), (2, 0)),
@@ -1881,46 +1977,37 @@ def ai_competition_panel(finished: list):
                 elif v == 1:
                     table[k]["outcome"] += 1
 
-    # ---- grand header + leaderboard ----------------------------------------
-    st.markdown(
-        f"""<div style="text-align:center;margin:26px 0 4px;">
-        <span class="section-tag" style="font-size:.85rem;padding:5px 22px;
-            border-color:#ffd84d;color:#ffd84d;
-            box-shadow:0 0 18px rgba(255,216,77,.25);">🏆 AI SHOWDOWN</span>
-        <div style="font-family:'Orbitron','Noto Sans TC';font-size:1.7rem;
-            margin-top:8px;background:linear-gradient(90deg,#4e8cff,#10c98d,#ffb13d);
-            -webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-            {"AI 預測比分大對決" if zh else "AI Score-Prediction Showdown"}</div>
-        <div class="kv" style="margin-top:4px;">
-            {"Gemini vs ChatGPT vs Claude — 72 場小組賽全預測・全中 3 分・猜中勝負 1 分"
-             if zh else
-             "Gemini vs ChatGPT vs Claude — all 72 group games · exact 3 pts · outcome 1 pt"}
-        </div></div>""", unsafe_allow_html=True)
-
+    # ---- animated header + leaderboard (iframe component) ------------------
     ranked = sorted(AI_MODELS, key=lambda m: -table[m[0]]["pts"])
     top_pts = table[ranked[0][0]]["pts"]
     cards = ""
-    for key, name, icon, color in ranked:
+    for i, (key, name, icon, color) in enumerate(ranked):
         t = table[key]
-        crown = " 👑" if (t["pts"] == top_pts and top_pts > 0) else ""
+        crown = ('<span class="crown">👑</span>'
+                 if (t["pts"] == top_pts and top_pts > 0) else "")
         if zh:
-            detail = ("積分 · 已結算 %d 場・全中 %d・猜中勝負 %d"
+            detail = ("已結算 %d 場・全中 %d・猜中勝負 %d"
                       % (t["played"], t["exact"], t["outcome"]))
         else:
-            detail = ("PTS · %d settled · %d exact · %d outcome"
+            detail = ("%d settled · %d exact · %d outcome"
                       % (t["played"], t["exact"], t["outcome"]))
         cards += (
-            f'<div style="flex:1;min-width:150px;text-align:center;'
-            f'padding:16px 10px;border-radius:14px;background:rgba(10,18,30,.7);'
-            f'border:1.5px solid {color};box-shadow:0 0 16px {color}33;">'
-            f'<div style="font-size:1.05rem;font-weight:700;color:{color};">'
-            f'{icon} {name}{crown}</div>'
-            f'<div style="font-family:\'Orbitron\';font-size:2rem;color:{color};'
-            f'margin:4px 0;">{t["pts"]}</div>'
-            f'<div class="kv">{detail}</div></div>')
-    st.markdown(
-        f'<div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 16px;">'
-        f'{cards}</div>', unsafe_allow_html=True)
+            f'<div class="lbcard" style="--c:{color};'
+            f'animation-delay:{i * .18}s,{i * .18}s;">'
+            f'<div class="nm">{icon} {name} {crown}</div>'
+            f'<div class="pts" data-v="{t["pts"]}">0</div>'
+            f'<div class="dl">{detail}</div></div>')
+    head_html = (SHOWDOWN_HTML
+                 .replace("__TITLE__",
+                          "AI 預測比分大對決" if zh
+                          else "AI Score-Prediction Showdown")
+                 .replace("__SUB__",
+                          "Gemini vs ChatGPT vs Claude — 72 場小組賽全預測・"
+                          "全中 3 分・猜中勝負 1 分" if zh else
+                          "Gemini vs ChatGPT vs Claude — all 72 group games · "
+                          "exact 3 pts · outcome 1 pt")
+                 .replace("__CARDS__", cards))
+    components.html(head_html, height=300, scrolling=False)
 
     # ---- per-group prediction rows ------------------------------------------
     tabs = st.tabs([f"Group {g}" for g in AI_PRED])
@@ -1934,7 +2021,7 @@ def ai_competition_panel(finished: list):
                 for key, name, icon, color in AI_MODELS:
                     p = preds[key]
                     win = s and key in s[2]
-                    trophy = " 🏆" if win else ""
+                    trophy = ' <span class="trophy">🏆</span>' if win else ""
                     border = (f"1.5px solid {color}" if win
                               else "1px solid rgba(255,255,255,.14)")
                     glow = f"box-shadow:0 0 10px {color}55;" if win else ""
@@ -1947,7 +2034,8 @@ def ai_competition_panel(finished: list):
                         f'<div style="font-family:\'Orbitron\';font-size:1.05rem;'
                         f'color:#d7e4f2;">{p[0]} - {p[1]}{trophy}</div></div>')
                 if s:
-                    act_html = (f'<span style="color:#00ffb2;font-family:'
+                    act_html = (f'<span class="ft-flash" style="color:#00ffb2;'
+                                f'font-family:'
                                 f"'Orbitron'"
                                 f';">{s[0][0]} - {s[0][1]}</span> '
                                 f'<span class="kv">{"終場" if zh else "FT"}</span>')
