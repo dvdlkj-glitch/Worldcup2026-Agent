@@ -1039,7 +1039,8 @@ def _fx_brief(f: dict) -> dict:
             "home": f["teams"]["home"]["name"],
             "away": f["teams"]["away"]["name"],
             "date": f["fixture"].get("date", ""),
-            "venue": (f"{vname} {vcity}").strip()}
+            "venue": (f"{vname} {vcity}").strip(),
+            "venue_name": vname}
 
 
 @st.cache_data(ttl=60, show_spinner=False)
@@ -1085,37 +1086,43 @@ justify-content:center;pointer-events:none;z-index:5}
 transform:rotate(-18deg);letter-spacing:10px;white-space:nowrap}
 .hdr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
 padding:18px 20px 8px;gap:10px;text-align:center}
-.team{font-weight:700;font-size:1rem}
+.team{font-weight:700;font-size:1.12rem}
 .team img{width:44px;height:31px;border-radius:4px;display:block;
 margin:0 auto 6px;border:1px solid rgba(255,255,255,.22);
 box-shadow:0 0 10px rgba(0,0,0,.6)}
 .team.h{color:#ffd84d}.team.a{color:#00aaff}
-.mid .dt{color:#7d93ab;font-size:.8rem}
+.mid .dt{color:#9db3ca;font-size:.92rem}
 .mid .sc{font-family:'Orbitron';font-size:1.7rem;color:#d7e4f2;margin:2px 0}
-.mid .st{color:#00ffb2;font-size:.7rem;font-family:'Orbitron','Noto Sans TC';
+.mid .st{color:#00ffb2;font-size:.78rem;font-family:'Orbitron','Noto Sans TC';
 letter-spacing:1.5px}
-.ven{text-align:center;color:#51677e;font-size:.78rem;padding-bottom:10px}
-.tabs{display:flex;border-top:1px solid rgba(255,255,255,.08);
-border-bottom:1px solid rgba(255,255,255,.08)}
+.ven{text-align:center;color:#7d93ab;font-size:.86rem;padding-bottom:8px}
+.stadwrap{display:none;margin:2px 16px 10px;border-radius:10px;
+overflow:hidden;border:1px solid rgba(255,255,255,.14)}
+.stadwrap img{width:100%;max-height:190px;object-fit:cover;display:block}
+.hint{text-align:center;color:#ffd84d;font-size:.85rem;padding:2px 0 8px;
+text-shadow:0 0 10px rgba(255,216,77,.3)}
+.tabs{display:flex;gap:8px;padding:0 14px 12px}
 .tab{flex:1;text-align:center;padding:9px 0;cursor:pointer;
-font-family:'Orbitron','Noto Sans TC';font-size:.66rem;letter-spacing:2px;
-color:#7d93ab;text-transform:uppercase}
-.tab.on{color:#00ffb2;box-shadow:inset 0 -2px 0 #00ffb2;
-background:rgba(0,255,178,.05)}
+font-family:'Orbitron','Noto Sans TC';font-size:.82rem;letter-spacing:2px;
+color:#aebfd2;text-transform:uppercase;border:1px solid rgba(255,255,255,.2);
+border-radius:999px;background:rgba(255,255,255,.04);transition:all .2s}
+.tab:hover{border-color:rgba(0,255,178,.5);color:#d7e4f2}
+.tab.on{color:#00ffb2;border-color:#00ffb2;background:rgba(0,255,178,.1);
+box-shadow:0 0 12px rgba(0,255,178,.25)}
 .panel{display:none;padding:16px 18px 14px}
 .panel.on{display:block}
 /* donuts */
 .drow{display:flex;justify-content:center;gap:36px;margin-bottom:14px}
 .donut{text-align:center}
 .donut svg{display:block;margin:0 auto}
-.dl{color:#7d93ab;font-size:.76rem;margin-top:4px}
-.dv{font-family:'Orbitron';font-size:.8rem}
+.dl{color:#8fa6bd;font-size:.84rem;margin-top:4px}
+.dv{font-family:'Orbitron';font-size:.88rem}
 .dv.h{fill:#ffd84d;color:#ffd84d}.dv.a{fill:#00aaff;color:#00aaff}
 /* bars */
 .row{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:.86rem}
 .val{font-family:'Orbitron';min-width:30px;text-align:center}
 .val.h{color:#ffd84d}.val.a{color:#00aaff}
-.lbl{min-width:84px;text-align:center;color:#8fa6bd;font-size:.78rem}
+.lbl{min-width:84px;text-align:center;color:#9db3ca;font-size:.86rem}
 .bar{flex:1;height:9px;background:rgba(255,255,255,.06);border-radius:999px;
 overflow:hidden;display:flex}
 .bh{background:linear-gradient(90deg,#ffd84d,#cc9900);height:100%;
@@ -1123,10 +1130,10 @@ margin-left:auto;border-radius:999px 0 0 999px}
 .ba{background:linear-gradient(90deg,#00aaff,#0066aa);height:100%;
 border-radius:0 999px 999px 0}
 /* events */
-.ev{display:flex;align-items:center;gap:10px;padding:7px 4px;
-border-bottom:1px solid rgba(255,255,255,.05);font-size:.88rem}
+.ev{display:flex;align-items:center;gap:10px;padding:8px 4px;
+border-bottom:1px solid rgba(255,255,255,.05);font-size:.96rem}
 .ev:last-child{border-bottom:none}
-.ev .min{font-family:'Orbitron';color:#4f9fd8;min-width:36px;font-size:.8rem}
+.ev .min{font-family:'Orbitron';color:#4f9fd8;min-width:38px;font-size:.88rem}
 .ev.h{justify-content:flex-start}.ev.a{flex-direction:row-reverse;text-align:right}
 .ev.a .min{text-align:right}
 /* pitch */
@@ -1146,7 +1153,10 @@ svg.pitch{width:100%;display:block;margin:0 auto}
       <div class="st">__STATUS__</div></div>
     <div class="team a">__AFLAG__<div>__AWAY__</div></div>
   </div>
-  <div class="ven">__VENUE__</div>
+  <div class="ven">🏟 __VENUE__</div>
+  <div class="stadwrap" id="stadwrap"><img id="stad" alt=""
+       onerror="this.parentElement.style.display='none'"></div>
+  <div class="hint">__TAB_HINT__</div>
   <div class="tabs">
     <div class="tab" data-p="pEv">__T_EV__</div>
     <div class="tab on" data-p="pSt">__T_ST__</div>
@@ -1206,15 +1216,33 @@ svg.pitch{width:100%;display:block;margin:0 auto}
   </div>
   <div class="panel" id="pLu">
     <div class="fl"><b class="h">__HOME__ · 4-3-3</b><b class="a">4-4-2 · __AWAY__</b></div>
-    <svg class="pitch" viewBox="0 0 700 300">
-      <rect x="5" y="5" width="690" height="290" rx="8"
-            fill="rgba(0,255,178,.025)" stroke="rgba(0,255,178,.25)"/>
-      <line x1="350" y1="5" x2="350" y2="295" stroke="rgba(0,255,178,.2)"/>
-      <circle cx="350" cy="150" r="38" fill="none" stroke="rgba(0,255,178,.2)"/>
-      <rect x="5" y="90" width="62" height="120" fill="none" stroke="rgba(0,255,178,.2)"/>
-      <rect x="633" y="90" width="62" height="120" fill="none" stroke="rgba(0,255,178,.2)"/>
+    <svg class="pitch" viewBox="0 0 700 330">
+      <defs>
+        <path id="sh" d="M -12,-11 L -5,-15 Q 0,-11 5,-15 L 12,-11 L 8,-4
+                         L 6,-6 L 6,12 L -6,12 L -6,-6 L -8,-4 Z"/>
+      </defs>
+      <rect x="0" y="0" width="700" height="330" rx="10" fill="#15672f"/>
+      <g fill="#1a7a39">
+        <rect x="0" y="0" width="100" height="330"/>
+        <rect x="200" y="0" width="100" height="330"/>
+        <rect x="400" y="0" width="100" height="330"/>
+        <rect x="600" y="0" width="100" height="330"/>
+      </g>
+      <g fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2">
+        <rect x="8" y="8" width="684" height="314"/>
+        <line x1="350" y1="8" x2="350" y2="322"/>
+        <circle cx="350" cy="165" r="44"/>
+        <rect x="8" y="95" width="72" height="140"/>
+        <rect x="620" y="95" width="72" height="140"/>
+        <rect x="8" y="135" width="28" height="60"/>
+        <rect x="664" y="135" width="28" height="60"/>
+      </g>
+      <circle cx="350" cy="165" r="3" fill="rgba(255,255,255,.75)"/>
+      <circle cx="62" cy="165" r="2.5" fill="rgba(255,255,255,.75)"/>
+      <circle cx="638" cy="165" r="2.5" fill="rgba(255,255,255,.75)"/>
       <g id="L"></g><g id="R"></g>
     </svg>
+    <div class="note" style="padding:8px 0 0">__LU_NOTE__</div>
   </div>
   <div class="note">__NOTE__</div>
 </div>
@@ -1226,21 +1254,44 @@ document.querySelectorAll('.tab').forEach(function(t){
     t.classList.add('on');
     document.getElementById(t.dataset.p).classList.add('on');};});
 var NS="http://www.w3.org/2000/svg";
-var L=[[35,150],[105,55],[105,118],[105,182],[105,245],[185,75],[185,150],
-[185,225],[265,55],[275,150],[265,245]];
-var R=[[665,150],[595,55],[595,118],[595,182],[595,245],[520,55],[520,118],
-[520,182],[520,245],[445,110],[445,190]];
-function dots(arr,g,color){arr.forEach(function(p,i){
-  var c=document.createElementNS(NS,'circle');
-  c.setAttribute('cx',p[0]);c.setAttribute('cy',p[1]);c.setAttribute('r',11);
-  c.setAttribute('fill',color);g.appendChild(c);
-  var t=document.createElementNS(NS,'text');
-  t.setAttribute('x',p[0]);t.setAttribute('y',p[1]+4);
-  t.setAttribute('text-anchor','middle');t.setAttribute('font-size','11');
-  t.setAttribute('font-weight','700');t.setAttribute('fill','#070b12');
-  t.textContent=i+1;g.appendChild(t);});}
-dots(L,document.getElementById('L'),'#ffd84d');
-dots(R,document.getElementById('R'),'#00aaff');
+var L=[[42,165],[115,62],[115,132],[115,198],[115,268],[200,90],[200,165],
+[200,240],[285,62],[298,165],[285,268]];
+var R=[[658,165],[585,62],[585,132],[585,198],[585,268],[508,62],[508,132],
+[508,198],[508,268],[432,122],[432,208]];
+var CL=["GK","LB","CB","CB","RB","CM","CM","CM","LW","ST","RW"];
+var CR=["GK","RB","CB","CB","LB","RM","CM","CM","LM","ST","ST"];
+var NUM=[1,3,4,5,2,8,6,10,11,9,7];
+function shirts(arr,codes,g,fill,numfill){
+  arr.forEach(function(p,i){
+    var u=document.createElementNS(NS,'use');
+    u.setAttribute('href','#sh');
+    u.setAttribute('transform','translate('+p[0]+','+p[1]+')');
+    u.setAttribute('fill',fill);u.setAttribute('stroke','#0a121e');
+    u.setAttribute('stroke-width','1.2');g.appendChild(u);
+    var n=document.createElementNS(NS,'text');
+    n.setAttribute('x',p[0]);n.setAttribute('y',p[1]+6);
+    n.setAttribute('text-anchor','middle');n.setAttribute('font-size','11');
+    n.setAttribute('font-weight','700');n.setAttribute('fill',numfill);
+    n.textContent=NUM[i];g.appendChild(n);
+    var t=document.createElementNS(NS,'text');
+    t.setAttribute('x',p[0]);t.setAttribute('y',p[1]+26);
+    t.setAttribute('text-anchor','middle');t.setAttribute('font-size','10.5');
+    t.setAttribute('font-weight','700');t.setAttribute('fill','#ffffff');
+    t.setAttribute('style','paint-order:stroke;stroke:#0a3018;stroke-width:3px');
+    t.textContent=codes[i];g.appendChild(t);});}
+shirts(L,CL,document.getElementById('L'),'#ffd84d','#0a121e');
+shirts(R,CR,document.getElementById('R'),'#0a84ff','#eaf4ff');
+var V="__VENUE_NAME__";
+if(V){
+  fetch("https://en.wikipedia.org/api/rest_v1/page/summary/"
+        +encodeURIComponent(V.replace(/ /g,"_")))
+  .then(function(r){return r.json();})
+  .then(function(j){
+    var u=(j.originalimage&&j.originalimage.source)
+          ||(j.thumbnail&&j.thumbnail.source);
+    if(u){document.getElementById('stad').src=u;
+      document.getElementById('stadwrap').style.display='block';}})
+  .catch(function(){});}
 </script></body></html>
 """
 
@@ -1258,9 +1309,19 @@ def demo_preview_panel(fx: dict):
             .replace("__HOME__", home).replace("__AWAY__", away)
             .replace("__DATE__", date_str)
             .replace("__VENUE__", fx.get("venue", ""))
+            .replace("__VENUE_NAME__",
+                     fx.get("venue_name", "").replace('"', ""))
             .replace("__BADGE__", "示意圖・開賽後自動替換" if zh
                      else "DEMO · swaps to live at kick-off")
             .replace("__STATUS__", "尚未開賽" if zh else "NOT STARTED")
+            .replace("__TAB_HINT__",
+                     "👇 點擊下方按鈕切換：事件・統計・陣容" if zh else
+                     "👇 Tap a button below: Events · Statistics · Lineups")
+            .replace("__LU_NOTE__",
+                     "陣型與位置為風格檔案示意——正式名單於開賽前公布，屆時自動帶入真實球員。"
+                     if zh else
+                     "Formation shown from style profiles — official lineups "
+                     "load automatically once announced.")
             .replace("__T_EV__", "事件" if zh else "Events")
             .replace("__T_ST__", "統計" if zh else "Statistics")
             .replace("__T_LU__", "陣容" if zh else "Lineups")
@@ -1277,7 +1338,7 @@ def demo_preview_panel(fx: dict):
                      if zh else
                      "⚠️ Layout preview with sample numbers — replaced by "
                      "official live data at kick-off."))
-    components.html(html, height=560, scrolling=False)
+    components.html(html, height=700, scrolling=False)
 
 
 def apisports_widget_panel():
