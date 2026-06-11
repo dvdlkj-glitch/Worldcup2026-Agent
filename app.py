@@ -1032,9 +1032,14 @@ def get_apif_data_key() -> str:
 
 
 def _fx_brief(f: dict) -> dict:
+    venue = f["fixture"].get("venue") or {}
+    vname = venue.get("name") or ""
+    vcity = venue.get("city") or ""
     return {"id": f["fixture"]["id"],
             "home": f["teams"]["home"]["name"],
-            "away": f["teams"]["away"]["name"]}
+            "away": f["teams"]["away"]["name"],
+            "date": f["fixture"].get("date", ""),
+            "venue": (f"{vname} {vcity}").strip()}
 
 
 @st.cache_data(ttl=60, show_spinner=False)
@@ -1061,79 +1066,170 @@ def apif_next_fixtures(key: str, n: int = 1) -> list:
     return [_fx_brief(f) for f in r.json().get("response", [])]
 
 
-# --- pre-match DEMO preview (watermarked; auto-replaced once live) ----------
+# --- pre-match DEMO widget (tabbed, themed; auto-replaced once live) --------
 DEMO_HTML = """
 <!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:transparent;color:#d7e4f2;font-family:'Noto Sans TC',sans-serif}
-.wrap{position:relative;max-width:760px;margin:0 auto;
-border:1px dashed rgba(255,216,77,.4);border-radius:14px;padding:16px}
+.card{position:relative;max-width:760px;margin:0 auto;
+background:rgba(10,18,30,.65);border:1px solid rgba(255,255,255,.1);
+border-radius:14px;overflow:hidden}
+.badge{position:absolute;top:10px;right:12px;font-family:'Orbitron','Noto Sans TC';
+font-size:.6rem;letter-spacing:2px;color:#ffd84d;
+border:1px dashed rgba(255,216,77,.55);border-radius:999px;padding:3px 10px;z-index:6}
 .wm{position:absolute;inset:0;display:flex;align-items:center;
-justify-content:center;pointer-events:none;z-index:9}
-.wm span{font-family:'Orbitron','Noto Sans TC';font-size:2.4rem;
-color:rgba(255,216,77,.16);transform:rotate(-18deg);letter-spacing:6px;
-white-space:nowrap}
-h4{font-family:'Orbitron','Noto Sans TC';font-size:.78rem;letter-spacing:2px;
-color:#7d93ab;text-transform:uppercase;margin:10px 0 8px;text-align:center}
-.vs{display:flex;justify-content:center;gap:12px;font-weight:700;
-font-size:1.05rem;margin-bottom:4px}
-.vs .h{color:#ffd84d}.vs .a{color:#00aaff}
-.row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.88rem}
-.val{font-family:'Orbitron';min-width:34px;text-align:center}
+justify-content:center;pointer-events:none;z-index:5}
+.wm span{font-family:'Orbitron';font-size:3.2rem;color:rgba(255,255,255,.035);
+transform:rotate(-18deg);letter-spacing:10px;white-space:nowrap}
+.hdr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+padding:18px 20px 8px;gap:10px;text-align:center}
+.team{font-weight:700;font-size:1rem}
+.team img{width:44px;height:31px;border-radius:4px;display:block;
+margin:0 auto 6px;border:1px solid rgba(255,255,255,.22);
+box-shadow:0 0 10px rgba(0,0,0,.6)}
+.team.h{color:#ffd84d}.team.a{color:#00aaff}
+.mid .dt{color:#7d93ab;font-size:.8rem}
+.mid .sc{font-family:'Orbitron';font-size:1.7rem;color:#d7e4f2;margin:2px 0}
+.mid .st{color:#00ffb2;font-size:.7rem;font-family:'Orbitron','Noto Sans TC';
+letter-spacing:1.5px}
+.ven{text-align:center;color:#51677e;font-size:.78rem;padding-bottom:10px}
+.tabs{display:flex;border-top:1px solid rgba(255,255,255,.08);
+border-bottom:1px solid rgba(255,255,255,.08)}
+.tab{flex:1;text-align:center;padding:9px 0;cursor:pointer;
+font-family:'Orbitron','Noto Sans TC';font-size:.66rem;letter-spacing:2px;
+color:#7d93ab;text-transform:uppercase}
+.tab.on{color:#00ffb2;box-shadow:inset 0 -2px 0 #00ffb2;
+background:rgba(0,255,178,.05)}
+.panel{display:none;padding:16px 18px 14px}
+.panel.on{display:block}
+/* donuts */
+.drow{display:flex;justify-content:center;gap:36px;margin-bottom:14px}
+.donut{text-align:center}
+.donut svg{display:block;margin:0 auto}
+.dl{color:#7d93ab;font-size:.76rem;margin-top:4px}
+.dv{font-family:'Orbitron';font-size:.8rem}
+.dv.h{fill:#ffd84d;color:#ffd84d}.dv.a{fill:#00aaff;color:#00aaff}
+/* bars */
+.row{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:.86rem}
+.val{font-family:'Orbitron';min-width:30px;text-align:center}
 .val.h{color:#ffd84d}.val.a{color:#00aaff}
-.lbl{min-width:88px;text-align:center;color:#8fa6bd;font-size:.8rem}
-.bar{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:999px;
+.lbl{min-width:84px;text-align:center;color:#8fa6bd;font-size:.78rem}
+.bar{flex:1;height:9px;background:rgba(255,255,255,.06);border-radius:999px;
 overflow:hidden;display:flex}
 .bh{background:linear-gradient(90deg,#ffd84d,#cc9900);height:100%;
 margin-left:auto;border-radius:999px 0 0 999px}
 .ba{background:linear-gradient(90deg,#00aaff,#0066aa);height:100%;
 border-radius:0 999px 999px 0}
-svg{width:100%;max-width:700px;display:block;margin:0 auto}
-.note{color:#8fa6bd;font-size:.78rem;text-align:center;margin-top:8px}
+/* events */
+.ev{display:flex;align-items:center;gap:10px;padding:7px 4px;
+border-bottom:1px solid rgba(255,255,255,.05);font-size:.88rem}
+.ev:last-child{border-bottom:none}
+.ev .min{font-family:'Orbitron';color:#4f9fd8;min-width:36px;font-size:.8rem}
+.ev.h{justify-content:flex-start}.ev.a{flex-direction:row-reverse;text-align:right}
+.ev.a .min{text-align:right}
+/* pitch */
+.fl{display:flex;justify-content:space-between;color:#7d93ab;
+font-size:.78rem;margin-bottom:4px}
+.fl b.h{color:#ffd84d}.fl b.a{color:#00aaff}
+svg.pitch{width:100%;display:block;margin:0 auto}
+.note{color:#8fa6bd;font-size:.76rem;text-align:center;padding:0 14px 12px}
+@media(max-width:600px){.drow{gap:18px}.lbl{min-width:64px}}
 </style></head><body>
-<div class="wrap">
-  <div class="wm"><span>__WM__</span></div>
-  <div class="vs"><span class="h">__HOME__</span><span style="color:#4f9fd8">vs</span>
-  <span class="a">__AWAY__</span></div>
-  <h4>__T_STATS__</h4>
-  <div class="row"><div class="val h">58%</div>
-    <div class="bar"><div class="bh" style="width:58%"></div></div>
-    <div class="lbl">__S_POSS__</div>
-    <div class="bar"><div class="ba" style="width:42%"></div></div>
-    <div class="val a">42%</div></div>
-  <div class="row"><div class="val h">12</div>
-    <div class="bar"><div class="bh" style="width:63%"></div></div>
-    <div class="lbl">__S_SHOTS__</div>
-    <div class="bar"><div class="ba" style="width:37%"></div></div>
-    <div class="val a">7</div></div>
-  <div class="row"><div class="val h">5</div>
-    <div class="bar"><div class="bh" style="width:62%"></div></div>
-    <div class="lbl">__S_SOT__</div>
-    <div class="bar"><div class="ba" style="width:38%"></div></div>
-    <div class="val a">3</div></div>
-  <div class="row"><div class="val h">6</div>
-    <div class="bar"><div class="bh" style="width:60%"></div></div>
-    <div class="lbl">__S_CORN__</div>
-    <div class="bar"><div class="ba" style="width:40%"></div></div>
-    <div class="val a">4</div></div>
-  <h4>__T_LINEUP__</h4>
-  <svg viewBox="0 0 700 300">
-    <rect x="5" y="5" width="690" height="290" rx="8" fill="rgba(0,255,178,.025)"
-          stroke="rgba(0,255,178,.25)"/>
-    <line x1="350" y1="5" x2="350" y2="295" stroke="rgba(0,255,178,.2)"/>
-    <circle cx="350" cy="150" r="38" fill="none" stroke="rgba(0,255,178,.2)"/>
-    <g id="L"></g><g id="R"></g>
-  </svg>
+<div class="card">
+  <div class="badge">__BADGE__</div>
+  <div class="wm"><span>DEMO</span></div>
+  <div class="hdr">
+    <div class="team h">__HFLAG__<div>__HOME__</div></div>
+    <div class="mid"><div class="dt">__DATE__</div><div class="sc">&ndash;</div>
+      <div class="st">__STATUS__</div></div>
+    <div class="team a">__AFLAG__<div>__AWAY__</div></div>
+  </div>
+  <div class="ven">__VENUE__</div>
+  <div class="tabs">
+    <div class="tab" data-p="pEv">__T_EV__</div>
+    <div class="tab on" data-p="pSt">__T_ST__</div>
+    <div class="tab" data-p="pLu">__T_LU__</div>
+  </div>
+  <div class="panel" id="pEv">
+    <div class="ev h"><span class="min">23'</span><span>⚽ __HOME__ — __EV_GOAL__</span></div>
+    <div class="ev a"><span class="min">41'</span><span>🟨 __AWAY__ — __EV_YEL__</span></div>
+    <div class="ev h"><span class="min">58'</span><span>🔄 __HOME__ — __EV_SUB__</span></div>
+    <div class="ev a"><span class="min">76'</span><span>⚽ __AWAY__ — __EV_GOAL__</span></div>
+  </div>
+  <div class="panel on" id="pSt">
+    <div class="drow">
+      <div class="donut">
+        <svg width="76" height="76" viewBox="0 0 76 76">
+          <circle cx="38" cy="38" r="30" fill="none"
+                  stroke="rgba(255,255,255,.07)" stroke-width="8"/>
+          <circle cx="38" cy="38" r="30" fill="none" stroke="#ffd84d"
+                  stroke-width="8" stroke-linecap="round"
+                  stroke-dasharray="109.3 188.5" transform="rotate(-90 38 38)"/>
+          <text x="38" y="43" text-anchor="middle" class="dv h"
+                font-size="15" font-family="Orbitron">58%</text>
+        </svg><div class="dl">__HOME__ __S_POSS__</div>
+      </div>
+      <div class="donut">
+        <svg width="76" height="76" viewBox="0 0 76 76">
+          <circle cx="38" cy="38" r="30" fill="none"
+                  stroke="rgba(255,255,255,.07)" stroke-width="8"/>
+          <circle cx="38" cy="38" r="30" fill="none" stroke="#00aaff"
+                  stroke-width="8" stroke-linecap="round"
+                  stroke-dasharray="79.2 188.5" transform="rotate(-90 38 38)"/>
+          <text x="38" y="43" text-anchor="middle" class="dv a"
+                font-size="15" font-family="Orbitron">42%</text>
+        </svg><div class="dl">__AWAY__ __S_POSS__</div>
+      </div>
+    </div>
+    <div class="row"><div class="val h">12</div>
+      <div class="bar"><div class="bh" style="width:63%"></div></div>
+      <div class="lbl">__S_SHOTS__</div>
+      <div class="bar"><div class="ba" style="width:37%"></div></div>
+      <div class="val a">7</div></div>
+    <div class="row"><div class="val h">5</div>
+      <div class="bar"><div class="bh" style="width:62%"></div></div>
+      <div class="lbl">__S_SOT__</div>
+      <div class="bar"><div class="ba" style="width:38%"></div></div>
+      <div class="val a">3</div></div>
+    <div class="row"><div class="val h">6</div>
+      <div class="bar"><div class="bh" style="width:60%"></div></div>
+      <div class="lbl">__S_CORN__</div>
+      <div class="bar"><div class="ba" style="width:40%"></div></div>
+      <div class="val a">4</div></div>
+    <div class="row"><div class="val h">9</div>
+      <div class="bar"><div class="bh" style="width:45%"></div></div>
+      <div class="lbl">__S_FOUL__</div>
+      <div class="bar"><div class="ba" style="width:55%"></div></div>
+      <div class="val a">11</div></div>
+  </div>
+  <div class="panel" id="pLu">
+    <div class="fl"><b class="h">__HOME__ · 4-3-3</b><b class="a">4-4-2 · __AWAY__</b></div>
+    <svg class="pitch" viewBox="0 0 700 300">
+      <rect x="5" y="5" width="690" height="290" rx="8"
+            fill="rgba(0,255,178,.025)" stroke="rgba(0,255,178,.25)"/>
+      <line x1="350" y1="5" x2="350" y2="295" stroke="rgba(0,255,178,.2)"/>
+      <circle cx="350" cy="150" r="38" fill="none" stroke="rgba(0,255,178,.2)"/>
+      <rect x="5" y="90" width="62" height="120" fill="none" stroke="rgba(0,255,178,.2)"/>
+      <rect x="633" y="90" width="62" height="120" fill="none" stroke="rgba(0,255,178,.2)"/>
+      <g id="L"></g><g id="R"></g>
+    </svg>
+  </div>
   <div class="note">__NOTE__</div>
 </div>
 <script>
+document.querySelectorAll('.tab').forEach(function(t){
+  t.onclick=function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
+    document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('on');});
+    t.classList.add('on');
+    document.getElementById(t.dataset.p).classList.add('on');};});
 var NS="http://www.w3.org/2000/svg";
 var L=[[35,150],[105,55],[105,118],[105,182],[105,245],[185,75],[185,150],
 [185,225],[265,55],[275,150],[265,245]];
-var R=[[665,150],[595,55],[595,118],[595,182],[595,245],[520,98],[520,202],
-[445,55],[445,150],[445,245],[395,150]];
+var R=[[665,150],[595,55],[595,118],[595,182],[595,245],[520,55],[520,118],
+[520,182],[520,245],[445,110],[445,190]];
 function dots(arr,g,color){arr.forEach(function(p,i){
   var c=document.createElementNS(NS,'circle');
   c.setAttribute('cx',p[0]);c.setAttribute('cy',p[1]);c.setAttribute('r',11);
@@ -1149,23 +1245,39 @@ dots(R,document.getElementById('R'),'#00aaff');
 """
 
 
-def demo_preview_panel(home: str, away: str):
+def demo_preview_panel(fx: dict):
     zh = st.session_state.get("lang", "中文") == "中文"
+    home, away = fx["home"], fx["away"]
+    try:
+        ko = datetime.fromisoformat(fx.get("date", "").replace("Z", "+00:00"))
+        date_str = fmt_dt(ko, long=True)
+    except Exception:
+        date_str = ""
     html = (DEMO_HTML
+            .replace("__HFLAG__", flag(home)).replace("__AFLAG__", flag(away))
             .replace("__HOME__", home).replace("__AWAY__", away)
-            .replace("__WM__", "示意圖 DEMO" if zh else "DEMO PREVIEW")
-            .replace("__T_STATS__", "統計（示意）" if zh else "Statistics (demo)")
+            .replace("__DATE__", date_str)
+            .replace("__VENUE__", fx.get("venue", ""))
+            .replace("__BADGE__", "示意圖・開賽後自動替換" if zh
+                     else "DEMO · swaps to live at kick-off")
+            .replace("__STATUS__", "尚未開賽" if zh else "NOT STARTED")
+            .replace("__T_EV__", "事件" if zh else "Events")
+            .replace("__T_ST__", "統計" if zh else "Statistics")
+            .replace("__T_LU__", "陣容" if zh else "Lineups")
             .replace("__S_POSS__", "控球率" if zh else "Possession")
             .replace("__S_SHOTS__", "射門" if zh else "Shots")
             .replace("__S_SOT__", "射正" if zh else "On target")
             .replace("__S_CORN__", "角球" if zh else "Corners")
-            .replace("__T_LINEUP__", "陣容（示意）" if zh else "Lineups (demo)")
+            .replace("__S_FOUL__", "犯規" if zh else "Fouls")
+            .replace("__EV_GOAL__", "進球（示意）" if zh else "Goal (sample)")
+            .replace("__EV_YEL__", "黃牌（示意）" if zh else "Yellow (sample)")
+            .replace("__EV_SUB__", "換人（示意）" if zh else "Sub (sample)")
             .replace("__NOTE__",
-                     "⚠️ 以上為版面示意，非真實數據——開賽後本區自動替換為即時統計與正式陣容。"
+                     "⚠️ 以上為版面示意、數字為樣本——開賽後本區自動替換為官方即時數據。"
                      if zh else
                      "⚠️ Layout preview with sample numbers — replaced by "
-                     "real live stats & official lineups at kick-off."))
-    components.html(html, height=620, scrolling=False)
+                     "official live data at kick-off."))
+    components.html(html, height=560, scrolling=False)
 
 
 def apisports_widget_panel():
@@ -1213,23 +1325,25 @@ def apisports_widget_panel():
                ("🔴 LIVE — stats updating" if live_mode
                 else "⏳ Next match — switches automatically at kick-off"))
         st.caption(cap)
-        for fx in fixtures[:3]:  # at most 3 simultaneous games
-            game_html = f"""
-            <div id="wg-api-football-game"
-                 data-host="v3.football.api-sports.io"
-                 data-key="{wkey}"
-                 data-id="{fx['id']}"
-                 data-theme="dark"
-                 data-refresh="60"
-                 data-show-errors="false"
-                 data-show-logos="true">
-            </div>
-            {widget_js}
-            """
-            components.html(game_html, height=780, scrolling=True)
-        if not live_mode:
-            # pre-match: show watermarked layout preview until kick-off
-            demo_preview_panel(fixtures[0]["home"], fixtures[0]["away"])
+        if live_mode:
+            for fx in fixtures[:3]:  # at most 3 simultaneous games
+                game_html = f"""
+                <div id="wg-api-football-game"
+                     data-host="v3.football.api-sports.io"
+                     data-key="{wkey}"
+                     data-id="{fx['id']}"
+                     data-theme="dark"
+                     data-refresh="60"
+                     data-show-errors="false"
+                     data-show-logos="true">
+                </div>
+                {widget_js}
+                """
+                components.html(game_html, height=780, scrolling=True)
+        else:
+            # pre-match: themed demo widget only (official one renders
+            # almost empty before kick-off and leaves a huge gap)
+            demo_preview_panel(fixtures[0])
     elif not dkey:
         st.info("再加 `APIFOOTBALL_KEY = \"...\"`（資料用主 key）即可自動釘選"
                 "進行中／下一場比賽的完整數據。" if zh else
