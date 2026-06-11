@@ -277,6 +277,26 @@ div[role="radiogroup"] label:has(input:checked) p {
     .stat .val { font-size: 1.05rem; }
     .mc-team { font-size: .88rem; }
 }
+
+/* extra-narrow screens — foldable cover displays (~340px) */
+@media (max-width: 380px) {
+    .block-container { padding-left: .6rem; padding-right: .6rem; }
+    .hero { padding: 14px 12px; }
+    .hero h1 { font-size: 1.1rem; }
+    .hero p { font-size: .8rem; }
+    .hero .byline { font-size: .56rem; letter-spacing: 1px; }
+    .stat { min-width: 100%; flex-basis: 100%; padding: 9px 12px; }
+    .sec-h { font-size: .95rem; }
+    .section-tag { font-size: .6rem; padding: 2px 10px; }
+    .mc-score { font-size: 1rem; min-width: 54px; }
+    .odds-rank { min-width: 24px; font-size: .68rem; }
+    .odds-team { min-width: 92px; font-size: .82rem; }
+    .odds-pct { min-width: 42px; font-size: .74rem; }
+    .pod { min-width: calc(50% - 10px); }
+    .big-pick .team { font-size: 1.2rem; }
+    .glass { padding: 10px 10px; }
+    .wc-table { min-width: 480px; font-size: .85rem; }
+}
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -738,11 +758,18 @@ CLOCK_HTML = """
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:transparent;color:#d7e4f2;font-family:'Noto Sans TC',sans-serif;
-display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:stretch}
+display:flex;flex-wrap:nowrap;gap:12px;justify-content:center;
+align-items:stretch}
 .panel{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);
 border-radius:14px;padding:14px 20px;text-align:center}
-.cd{flex:1.2;min-width:300px}
-.wc{flex:1;min-width:300px}
+.cd{flex:1.2;min-width:280px}
+.wc{flex:1;min-width:280px}
+/* narrow screens (incl. foldables' cover display): scale whole strip
+   instead of wrapping — keeps both panels visible in the fixed iframe */
+@media(max-width:680px){body{zoom:.8}}
+@media(max-width:540px){body{zoom:.66}}
+@media(max-width:430px){body{zoom:.56}}
+@media(max-width:360px){body{zoom:.48}}
 .lbl{font-family:'Orbitron','Noto Sans TC';font-size:.7rem;letter-spacing:2.5px;
 color:#7d93ab;text-transform:uppercase;margin-bottom:8px}
 .cd .match{color:#ffd84d;font-size:.95rem;font-weight:600;margin-bottom:8px}
@@ -767,9 +794,6 @@ overflow:hidden;text-overflow:ellipsis}
 font-variant-numeric:tabular-nums;white-space:nowrap;
 text-shadow:0 0 10px rgba(0,170,255,.4)}
 .cflag{font-size:.85rem}
-@media(max-width:740px){
-.dbox{width:56px}.dnum{font-size:1.2rem}
-.city{width:92px;padding:6px 2px}.ctime{font-size:.88rem}}
 </style></head><body>
 <div class="panel cd">
   <div class="lbl">__CD_TITLE__</div>
