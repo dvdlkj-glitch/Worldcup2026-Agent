@@ -1010,8 +1010,12 @@ def apisports_widget_panel():
     try:
         wkey = (st.secrets.get("APIFOOTBALL_WIDGET_KEY", "")
                 or st.secrets.get("API_FOOTBALL_WIDGET_KEY", ""))
+        # free API-Football plans only expose seasons 2021-2023.
+        # Set APIFOOTBALL_WIDGET_SEASON="2022" in secrets to preview the
+        # widget with WC2022 data before upgrading; remove it once on Pro.
+        wseason = st.secrets.get("APIFOOTBALL_WIDGET_SEASON", "2026")
     except Exception:
-        wkey = ""
+        wkey, wseason = "", "2026"
     section("MATCH CENTER",
             "📺 賽事中心 — 點選比賽看即時數據、陣容、事件"
             if zh else "📺 Match centre — tap a game for live stats & lineups")
@@ -1028,7 +1032,7 @@ def apisports_widget_panel():
          data-host="v3.football.api-sports.io"
          data-key="{wkey}"
          data-league="1"
-         data-season="2026"
+         data-season="{wseason}"
          data-theme="dark"
          data-refresh="60"
          data-show-toolbar="true"
