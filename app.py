@@ -12,6 +12,7 @@ Data sources:
 import json
 from datetime import datetime, timezone, timedelta
 
+import altair as alt
 import pandas as pd
 import requests
 import streamlit as st
@@ -200,15 +201,20 @@ img.flag.sm { width: 21px; height: 15px; }
 .stTabs [data-baseweb="tab-highlight"] { background-color: #00ffb2; }
 .stTabs [data-baseweb="tab-border"] { background: rgba(255,255,255,.1); }
 
-/* language radio */
+/* language radio — force readable text on any base theme */
 div[role="radiogroup"] { gap: 4px; }
 div[role="radiogroup"] label {
-    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+    background: rgba(10,18,30,.85); border: 1px solid rgba(255,255,255,.18);
     border-radius: 999px; padding: 2px 14px;
 }
-div[role="radiogroup"] label[data-checked="true"],
+div[role="radiogroup"] label p, div[role="radiogroup"] label div {
+    color: #c7d6e6 !important; font-weight: 600;
+}
 div[role="radiogroup"] label:has(input:checked) {
-    border-color: rgba(0,255,178,.5); background: rgba(0,255,178,.08);
+    border-color: rgba(0,255,178,.6); background: rgba(0,255,178,.12);
+}
+div[role="radiogroup"] label:has(input:checked) p {
+    color: #00ffb2 !important;
 }
 
 .kv { color:#8fa6bd; font-size:.92rem; }
@@ -710,6 +716,121 @@ play();
 """
 
 
+# ----------------------------------------------------------------------------
+# Countdown + host-city world clocks (live ticking via embedded JS)
+# ----------------------------------------------------------------------------
+CLOCK_HTML = """
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent;color:#d7e4f2;font-family:'Noto Sans TC',sans-serif;
+display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:stretch}
+.panel{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);
+border-radius:14px;padding:14px 20px;text-align:center}
+.cd{flex:1.2;min-width:300px}
+.wc{flex:1;min-width:300px}
+.lbl{font-family:'Orbitron','Noto Sans TC';font-size:.7rem;letter-spacing:2.5px;
+color:#7d93ab;text-transform:uppercase;margin-bottom:8px}
+.cd .match{color:#ffd84d;font-size:.95rem;font-weight:600;margin-bottom:8px}
+.digits{display:flex;gap:8px;justify-content:center}
+.dbox{background:rgba(10,18,30,.85);border:1px solid rgba(0,255,178,.3);
+border-radius:10px;padding:7px 0;min-width:62px;
+box-shadow:0 0 14px rgba(0,255,178,.12)}
+.dnum{font-family:'Orbitron';font-size:1.55rem;color:#00ffb2;
+text-shadow:0 0 12px rgba(0,255,178,.5)}
+.dlab{font-size:.68rem;color:#7d93ab;letter-spacing:1.5px;margin-top:2px}
+.kick{font-family:'Orbitron';font-size:1.5rem;color:#ffd84d;
+text-shadow:0 0 18px rgba(255,216,77,.5);padding:14px 0;
+animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
+.cities{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.city{background:rgba(10,18,30,.85);border:1px solid rgba(0,170,255,.25);
+border-radius:10px;padding:7px 10px;min-width:88px}
+.cname{font-size:.74rem;color:#7d93ab;margin-bottom:2px}
+.ctime{font-family:'Orbitron';font-size:1.05rem;color:#00aaff;
+text-shadow:0 0 10px rgba(0,170,255,.4)}
+.cflag{font-size:.85rem}
+@media(max-width:740px){
+.dbox{min-width:52px}.dnum{font-size:1.2rem}
+.city{min-width:80px;padding:6px 6px}.ctime{font-size:.92rem}}
+</style></head><body>
+<div class="panel cd">
+  <div class="lbl">__CD_TITLE__</div>
+  <div class="match">__MATCH__</div>
+  <div class="digits" id="digits">
+    <div class="dbox"><div class="dnum" id="dd">--</div><div class="dlab">__D__</div></div>
+    <div class="dbox"><div class="dnum" id="hh">--</div><div class="dlab">__H__</div></div>
+    <div class="dbox"><div class="dnum" id="mm">--</div><div class="dlab">__M__</div></div>
+    <div class="dbox"><div class="dnum" id="ss">--</div><div class="dlab">__S__</div></div>
+  </div>
+</div>
+<div class="panel wc">
+  <div class="lbl">__WC_TITLE__</div>
+  <div class="cities">
+    <div class="city"><div class="cname"><span class="cflag">🇹🇼</span> __C1__</div><div class="ctime" id="t1">--:--</div></div>
+    <div class="city"><div class="cname"><span class="cflag">🇲🇽</span> __C2__</div><div class="ctime" id="t2">--:--</div></div>
+    <div class="city"><div class="cname"><span class="cflag">🇺🇸</span> __C3__</div><div class="ctime" id="t3">--:--</div></div>
+    <div class="city"><div class="cname"><span class="cflag">🇺🇸</span> __C4__</div><div class="ctime" id="t4">--:--</div></div>
+  </div>
+</div>
+<script>
+var target = new Date("__TARGET__").getTime();
+function pad(n){return (n<10?"0":"")+n;}
+function tick(){
+  var now = Date.now();
+  var d = target - now;
+  if (d <= 0){
+    document.getElementById('digits').innerHTML =
+      '<div class="kick">__KICKOFF__</div>';
+  } else {
+    document.getElementById('dd').textContent = Math.floor(d/86400000);
+    document.getElementById('hh').textContent = pad(Math.floor(d/3600000)%24);
+    document.getElementById('mm').textContent = pad(Math.floor(d/60000)%60);
+    document.getElementById('ss').textContent = pad(Math.floor(d/1000)%60);
+  }
+  var zones = [["t1","Asia/Taipei"],["t2","America/Mexico_City"],
+               ["t3","America/New_York"],["t4","America/Los_Angeles"]];
+  zones.forEach(function(z){
+    document.getElementById(z[0]).textContent =
+      new Date().toLocaleTimeString('en-GB',
+        {timeZone:z[1],hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  });
+}
+tick(); setInterval(tick, 1000);
+</script></body></html>
+"""
+
+# fallback: opening match — Mexico City, 11 Jun 2026 20:00 local (UTC-6)
+OPENING_UTC = "2026-06-12T02:00:00Z"
+
+
+def clock_panel(next_match=None):
+    zh = st.session_state.get("lang", "中文") == "中文"
+    if next_match:
+        target = next_match["utcDate"]
+        h, a = next_match["homeTeam"]["name"], next_match["awayTeam"]["name"]
+        match_lbl = f"{h} vs {a}"
+    else:
+        target = OPENING_UTC
+        match_lbl = "揭幕戰・墨西哥城" if zh else "Opening match · Mexico City"
+    html = (CLOCK_HTML
+            .replace("__TARGET__", target)
+            .replace("__MATCH__", match_lbl)
+            .replace("__CD_TITLE__", "⏳ 距離下一場開賽" if zh else "⏳ Next kickoff in")
+            .replace("__D__", "天" if zh else "DAYS")
+            .replace("__H__", "時" if zh else "HRS")
+            .replace("__M__", "分" if zh else "MIN")
+            .replace("__S__", "秒" if zh else "SEC")
+            .replace("__KICKOFF__", "比賽進行中 ⚽" if zh else "KICK-OFF! ⚽")
+            .replace("__WC_TITLE__", "🌍 主辦地現在時間" if zh else "🌍 Host-city time now")
+            .replace("__C1__", "台北" if zh else "Taipei")
+            .replace("__C2__", "墨西哥城" if zh else "Mexico City")
+            .replace("__C3__", "紐約" if zh else "New York")
+            .replace("__C4__", "洛杉磯" if zh else "Los Angeles"))
+    components.html(html, height=150, scrolling=False)
+
+
 def flow_panel():
     st.markdown(f'<span class="section-tag">SYSTEM FLOW</span>'
                 f'<div class="sec-h">{L("flow_title")}</div>',
@@ -848,9 +969,34 @@ def trend_panel(odds: list):
     df = pd.DataFrame.from_dict(data, orient="index").sort_index()
     df.index = df.index.tz_convert("Asia/Taipei") if df.index.tz \
         else df.index
-    st.line_chart(df, height=320,
-                  color=["#00ffb2", "#00aaff", "#ffd84d", "#ff6b87",
-                         "#b07cff"][:len(df.columns)])
+    long = (df.reset_index().rename(columns={"index": "time"})
+            .melt("time", var_name="team", value_name="prob"))
+    palette = ["#00ffb2", "#00aaff", "#ffd84d", "#ff6b87", "#b07cff"]
+    axis_kw = dict(labelColor="#7d93ab", titleColor="#7d93ab",
+                   gridColor="rgba(255,255,255,.07)",
+                   domainColor="rgba(255,255,255,.25)",
+                   tickColor="rgba(255,255,255,.25)")
+    chart = (
+        alt.Chart(long)
+        .mark_line(strokeWidth=2.5, interpolate="monotone")
+        .encode(
+            x=alt.X("time:T", axis=alt.Axis(title=None, format="%m/%d",
+                                            **axis_kw)),
+            y=alt.Y("prob:Q", axis=alt.Axis(title="%", **axis_kw),
+                    scale=alt.Scale(zero=False)),
+            color=alt.Color(
+                "team:N",
+                scale=alt.Scale(range=palette),
+                legend=alt.Legend(title=None, orient="top",
+                                  labelColor="#d7e4f2", labelFontSize=13)),
+            tooltip=[alt.Tooltip("time:T", format="%m/%d %H:%M"),
+                     alt.Tooltip("team:N"),
+                     alt.Tooltip("prob:Q", format=".1f")],
+        )
+        .properties(height=320, background="transparent")
+        .configure_view(stroke=None)
+    )
+    st.altair_chart(chart, use_container_width=True)
     st.caption(L("trend_caption"))
 
 
@@ -967,6 +1113,11 @@ def dashboard():
     finished = sorted((m for m in all_matches if m.get("status") == "FINISHED"),
                       key=lambda m: m["utcDate"], reverse=True)
 
+    nxt = upcoming[0] if upcoming else None
+    if live:
+        clock_panel(None if not upcoming else nxt)
+    else:
+        clock_panel(nxt)
     stat_strip(len(live), today_n, odds[0][0], odds[0][1])
 
     if not api_key:
