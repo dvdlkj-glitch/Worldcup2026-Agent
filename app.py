@@ -1005,6 +1005,43 @@ def tactics_panel(nxt: dict, odds_map: dict):
 # API-SPORTS widgets. Use the dedicated *Widget* key from your dashboard, NOT
 # your main data API key.
 # ----------------------------------------------------------------------------
+APIF_BASE = "https://v3.football.api-sports.io"
+
+
+def get_apif_data_key() -> str:
+    """Server-side API-Football data key (NOT the widget key)."""
+    try:
+        return (st.secrets.get("APIFOOTBALL_KEY", "")
+                or st.secrets.get("API_FOOTBALL_KEY", "")
+                or st.secrets.get("APIFOOTBALL_DATA_KEY", ""))
+    except Exception:
+        return ""
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def apif_live_fixture_ids(key: str) -> list:
+    """IDs of World Cup fixtures currently in play."""
+    if not key:
+        return []
+    r = requests.get(f"{APIF_BASE}/fixtures",
+                     params={"live": "all", "league": 1},
+                     headers={"x-apisports-key": key}, timeout=15)
+    r.raise_for_status()
+    return [f["fixture"]["id"] for f in r.json().get("response", [])]
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def apif_next_fixture_ids(key: str, n: int = 1) -> list:
+    """IDs of the next n upcoming World Cup fixtures."""
+    if not key:
+        return []
+    r = requests.get(f"{APIF_BASE}/fixtures",
+                     params={"league": 1, "next": n},
+                     headers={"x-apisports-key": key}, timeout=15)
+    r.raise_for_status()
+    return [f["fixture"]["id"] for f in r.json().get("response", [])]
+
+
 def apisports_widget_panel():
     zh = st.session_state.get("lang", "中文") == "中文"
     try:
@@ -1017,8 +1054,8 @@ def apisports_widget_panel():
     except Exception:
         wkey, wseason = "", "2026"
     section("MATCH CENTER",
-            "📺 賽事中心 — 點選比賽看即時數據、陣容、事件"
-            if zh else "📺 Match centre — tap a game for live stats & lineups")
+            "📺 賽事中心 — 進行中／即將開賽自動釘選"
+            if zh else "📺 Match centre — live & next match auto-pinned")
     if not wkey:
         st.info("在 Streamlit secrets 加入 `APIFOOTBALL_WIDGET_KEY = \"...\"`"
                 "（API-SPORTS 後台 Widget Builder 的專用 key）即可啟用。"
@@ -1027,25 +1064,76 @@ def apisports_widget_panel():
                 "from the API-SPORTS Widget Builder) to Streamlit secrets "
                 "to enable.")
         return
-    html = f"""
-    <div id="wg-api-football-games"
-         data-host="v3.football.api-sports.io"
-         data-key="{wkey}"
-         data-league="1"
-         data-season="{wseason}"
-         data-theme="dark"
-         data-refresh="60"
-         data-show-toolbar="true"
-         data-show-errors="false"
-         data-show-logos="true"
-         data-modal-game="true"
-         data-modal-standings="true"
-         data-modal-show-logos="true">
-    </div>
-    <script type="module"
-            src="https://widgets.api-sports.io/2.0.3/widgets.js"></script>
-    """
-    components.html(html, height=860, scrolling=True)
+
+    widget_js = ('<script type="module" '
+                 'src="https://widgets.api-sports.io/2.0.3/widgets.js">'
+                 '</script>')
+
+    # --- auto-pin: all live games, else the next upcoming game -------------
+    dkey = get_apif_data_key()
+    ids, live_mode, fetch_err = [], False, None
+    if dkey:
+        try:
+            ids = apif_live_fixture_ids(dkey)
+            live_mode = bool(ids)
+            if not ids:
+                ids = apif_next_fixture_ids(dkey, 1)
+        except Exception as e:  # noqa: BLE001
+            fetch_err = str(e)
+
+    if ids:
+        cap = (("🔴 進行中——數據即時更新" if live_mode else "⏳ 下一場——開賽後自動切換")
+               if zh else
+               ("🔴 LIVE — stats updating" if live_mode
+                else "⏳ Next match — switches automatically at kick-off"))
+        st.caption(cap)
+        for fid in ids[:3]:  # at most 3 simultaneous games
+            game_html = f"""
+            <div id="wg-api-football-game"
+                 data-host="v3.football.api-sports.io"
+                 data-key="{wkey}"
+                 data-id="{fid}"
+                 data-theme="dark"
+                 data-refresh="60"
+                 data-show-errors="false"
+                 data-show-logos="true">
+            </div>
+            {widget_js}
+            """
+            components.html(game_html, height=780, scrolling=True)
+    elif not dkey:
+        st.info("再加 `APIFOOTBALL_KEY = \"...\"`（資料用主 key）即可自動釘選"
+                "進行中／下一場比賽的完整數據。" if zh else
+                "Also add `APIFOOTBALL_KEY = \"...\"` (your main data key) "
+                "to auto-pin the live / next match detail.")
+    elif fetch_err:
+        st.warning(f"API-Football: {fetch_err}")
+    else:
+        st.info("目前查無進行中或即將開賽的場次（免費方案查不到 2026 球季——"
+                "升級後自動恢復）。" if zh else
+                "No live or upcoming fixtures found (free plans cannot query "
+                "season 2026 — resolves after upgrading).")
+
+    # --- full schedule list, tucked away ------------------------------------
+    with st.expander("📋 完整賽程列表" if zh else "📋 Full schedule", False):
+        list_html = f"""
+        <div id="wg-api-football-games"
+             data-host="v3.football.api-sports.io"
+             data-key="{wkey}"
+             data-league="1"
+             data-season="{wseason}"
+             data-theme="dark"
+             data-refresh="60"
+             data-show-toolbar="true"
+             data-show-errors="false"
+             data-show-logos="true"
+             data-modal-game="true"
+             data-modal-standings="true"
+             data-modal-show-logos="true">
+        </div>
+        {widget_js}
+        """
+        components.html(list_html, height=700, scrolling=True)
 
 
 # fallback: opening match — Mexico City, 11 Jun 2026 20:00 local (UTC-6)
