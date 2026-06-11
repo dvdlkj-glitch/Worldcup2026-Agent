@@ -999,6 +999,51 @@ def tactics_panel(nxt: dict, odds_map: dict):
     components.html(html, height=560, scrolling=False)
 
 
+# ----------------------------------------------------------------------------
+# API-SPORTS official match-centre widget (live events/stats/lineups/players)
+# NOTE: the widget key is rendered into the page HTML — that is by design for
+# API-SPORTS widgets. Use the dedicated *Widget* key from your dashboard, NOT
+# your main data API key.
+# ----------------------------------------------------------------------------
+def apisports_widget_panel():
+    zh = st.session_state.get("lang", "中文") == "中文"
+    try:
+        wkey = (st.secrets.get("APIFOOTBALL_WIDGET_KEY", "")
+                or st.secrets.get("API_FOOTBALL_WIDGET_KEY", ""))
+    except Exception:
+        wkey = ""
+    section("MATCH CENTER",
+            "📺 賽事中心 — 點選比賽看即時數據、陣容、事件"
+            if zh else "📺 Match centre — tap a game for live stats & lineups")
+    if not wkey:
+        st.info("在 Streamlit secrets 加入 `APIFOOTBALL_WIDGET_KEY = \"...\"`"
+                "（API-SPORTS 後台 Widget Builder 的專用 key）即可啟用。"
+                if zh else
+                "Add `APIFOOTBALL_WIDGET_KEY = \"...\"` (the dedicated key "
+                "from the API-SPORTS Widget Builder) to Streamlit secrets "
+                "to enable.")
+        return
+    html = f"""
+    <div id="wg-api-football-games"
+         data-host="v3.football.api-sports.io"
+         data-key="{wkey}"
+         data-league="1"
+         data-season="2026"
+         data-theme="dark"
+         data-refresh="60"
+         data-show-toolbar="true"
+         data-show-errors="false"
+         data-show-logos="true"
+         data-modal-game="true"
+         data-modal-standings="true"
+         data-modal-show-logos="true">
+    </div>
+    <script type="module"
+            src="https://widgets.api-sports.io/2.0.3/widgets.js"></script>
+    """
+    components.html(html, height=860, scrolling=True)
+
+
 # fallback: opening match — Mexico City, 11 Jun 2026 20:00 local (UTC-6)
 OPENING_UTC = "2026-06-12T02:00:00Z"
 
@@ -1336,9 +1381,9 @@ def dashboard():
         odds_panel(odds, odds_live)
 
     trend_panel(odds)
+    apisports_widget_panel()
     next_match_panel(upcoming, odds_map)
-    if upcoming:
-        tactics_panel(upcoming[0], odds_map)
+    # tactics_panel(upcoming[0], odds_map)  # disabled — re-enable anytime
     standings_panel(standings)
 
     if finished:
