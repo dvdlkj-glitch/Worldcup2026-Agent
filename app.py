@@ -221,6 +221,19 @@ div[role="radiogroup"] label:has(input:checked) p {
 .kv b { color:#e8f1fa; }
 .foot { text-align:center; color:#51677e; margin-top:28px; font-size:.9rem; }
 
+/* expander — keep dark on any base theme */
+[data-testid="stExpander"] {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.1) !important;
+    border-radius: 12px;
+}
+[data-testid="stExpander"] summary,
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span {
+    color: #c7d6e6 !important;
+}
+[data-testid="stExpander"] svg { fill: #c7d6e6; }
+
 /* ---- responsive: tablet ---- */
 .tbl-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .wc-table { min-width: 560px; }
@@ -1018,28 +1031,141 @@ def get_apif_data_key() -> str:
         return ""
 
 
+def _fx_brief(f: dict) -> dict:
+    return {"id": f["fixture"]["id"],
+            "home": f["teams"]["home"]["name"],
+            "away": f["teams"]["away"]["name"]}
+
+
 @st.cache_data(ttl=60, show_spinner=False)
-def apif_live_fixture_ids(key: str) -> list:
-    """IDs of World Cup fixtures currently in play."""
+def apif_live_fixtures(key: str) -> list:
+    """World Cup fixtures currently in play: [{id, home, away}]."""
     if not key:
         return []
     r = requests.get(f"{APIF_BASE}/fixtures",
                      params={"live": "all", "league": 1},
                      headers={"x-apisports-key": key}, timeout=15)
     r.raise_for_status()
-    return [f["fixture"]["id"] for f in r.json().get("response", [])]
+    return [_fx_brief(f) for f in r.json().get("response", [])]
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def apif_next_fixture_ids(key: str, n: int = 1) -> list:
-    """IDs of the next n upcoming World Cup fixtures."""
+def apif_next_fixtures(key: str, n: int = 1) -> list:
+    """Next n upcoming World Cup fixtures: [{id, home, away}]."""
     if not key:
         return []
     r = requests.get(f"{APIF_BASE}/fixtures",
                      params={"league": 1, "next": n},
                      headers={"x-apisports-key": key}, timeout=15)
     r.raise_for_status()
-    return [f["fixture"]["id"] for f in r.json().get("response", [])]
+    return [_fx_brief(f) for f in r.json().get("response", [])]
+
+
+# --- pre-match DEMO preview (watermarked; auto-replaced once live) ----------
+DEMO_HTML = """
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:transparent;color:#d7e4f2;font-family:'Noto Sans TC',sans-serif}
+.wrap{position:relative;max-width:760px;margin:0 auto;
+border:1px dashed rgba(255,216,77,.4);border-radius:14px;padding:16px}
+.wm{position:absolute;inset:0;display:flex;align-items:center;
+justify-content:center;pointer-events:none;z-index:9}
+.wm span{font-family:'Orbitron','Noto Sans TC';font-size:2.4rem;
+color:rgba(255,216,77,.16);transform:rotate(-18deg);letter-spacing:6px;
+white-space:nowrap}
+h4{font-family:'Orbitron','Noto Sans TC';font-size:.78rem;letter-spacing:2px;
+color:#7d93ab;text-transform:uppercase;margin:10px 0 8px;text-align:center}
+.vs{display:flex;justify-content:center;gap:12px;font-weight:700;
+font-size:1.05rem;margin-bottom:4px}
+.vs .h{color:#ffd84d}.vs .a{color:#00aaff}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.88rem}
+.val{font-family:'Orbitron';min-width:34px;text-align:center}
+.val.h{color:#ffd84d}.val.a{color:#00aaff}
+.lbl{min-width:88px;text-align:center;color:#8fa6bd;font-size:.8rem}
+.bar{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:999px;
+overflow:hidden;display:flex}
+.bh{background:linear-gradient(90deg,#ffd84d,#cc9900);height:100%;
+margin-left:auto;border-radius:999px 0 0 999px}
+.ba{background:linear-gradient(90deg,#00aaff,#0066aa);height:100%;
+border-radius:0 999px 999px 0}
+svg{width:100%;max-width:700px;display:block;margin:0 auto}
+.note{color:#8fa6bd;font-size:.78rem;text-align:center;margin-top:8px}
+</style></head><body>
+<div class="wrap">
+  <div class="wm"><span>__WM__</span></div>
+  <div class="vs"><span class="h">__HOME__</span><span style="color:#4f9fd8">vs</span>
+  <span class="a">__AWAY__</span></div>
+  <h4>__T_STATS__</h4>
+  <div class="row"><div class="val h">58%</div>
+    <div class="bar"><div class="bh" style="width:58%"></div></div>
+    <div class="lbl">__S_POSS__</div>
+    <div class="bar"><div class="ba" style="width:42%"></div></div>
+    <div class="val a">42%</div></div>
+  <div class="row"><div class="val h">12</div>
+    <div class="bar"><div class="bh" style="width:63%"></div></div>
+    <div class="lbl">__S_SHOTS__</div>
+    <div class="bar"><div class="ba" style="width:37%"></div></div>
+    <div class="val a">7</div></div>
+  <div class="row"><div class="val h">5</div>
+    <div class="bar"><div class="bh" style="width:62%"></div></div>
+    <div class="lbl">__S_SOT__</div>
+    <div class="bar"><div class="ba" style="width:38%"></div></div>
+    <div class="val a">3</div></div>
+  <div class="row"><div class="val h">6</div>
+    <div class="bar"><div class="bh" style="width:60%"></div></div>
+    <div class="lbl">__S_CORN__</div>
+    <div class="bar"><div class="ba" style="width:40%"></div></div>
+    <div class="val a">4</div></div>
+  <h4>__T_LINEUP__</h4>
+  <svg viewBox="0 0 700 300">
+    <rect x="5" y="5" width="690" height="290" rx="8" fill="rgba(0,255,178,.025)"
+          stroke="rgba(0,255,178,.25)"/>
+    <line x1="350" y1="5" x2="350" y2="295" stroke="rgba(0,255,178,.2)"/>
+    <circle cx="350" cy="150" r="38" fill="none" stroke="rgba(0,255,178,.2)"/>
+    <g id="L"></g><g id="R"></g>
+  </svg>
+  <div class="note">__NOTE__</div>
+</div>
+<script>
+var NS="http://www.w3.org/2000/svg";
+var L=[[35,150],[105,55],[105,118],[105,182],[105,245],[185,75],[185,150],
+[185,225],[265,55],[275,150],[265,245]];
+var R=[[665,150],[595,55],[595,118],[595,182],[595,245],[520,98],[520,202],
+[445,55],[445,150],[445,245],[395,150]];
+function dots(arr,g,color){arr.forEach(function(p,i){
+  var c=document.createElementNS(NS,'circle');
+  c.setAttribute('cx',p[0]);c.setAttribute('cy',p[1]);c.setAttribute('r',11);
+  c.setAttribute('fill',color);g.appendChild(c);
+  var t=document.createElementNS(NS,'text');
+  t.setAttribute('x',p[0]);t.setAttribute('y',p[1]+4);
+  t.setAttribute('text-anchor','middle');t.setAttribute('font-size','11');
+  t.setAttribute('font-weight','700');t.setAttribute('fill','#070b12');
+  t.textContent=i+1;g.appendChild(t);});}
+dots(L,document.getElementById('L'),'#ffd84d');
+dots(R,document.getElementById('R'),'#00aaff');
+</script></body></html>
+"""
+
+
+def demo_preview_panel(home: str, away: str):
+    zh = st.session_state.get("lang", "中文") == "中文"
+    html = (DEMO_HTML
+            .replace("__HOME__", home).replace("__AWAY__", away)
+            .replace("__WM__", "示意圖 DEMO" if zh else "DEMO PREVIEW")
+            .replace("__T_STATS__", "統計（示意）" if zh else "Statistics (demo)")
+            .replace("__S_POSS__", "控球率" if zh else "Possession")
+            .replace("__S_SHOTS__", "射門" if zh else "Shots")
+            .replace("__S_SOT__", "射正" if zh else "On target")
+            .replace("__S_CORN__", "角球" if zh else "Corners")
+            .replace("__T_LINEUP__", "陣容（示意）" if zh else "Lineups (demo)")
+            .replace("__NOTE__",
+                     "⚠️ 以上為版面示意，非真實數據——開賽後本區自動替換為即時統計與正式陣容。"
+                     if zh else
+                     "⚠️ Layout preview with sample numbers — replaced by "
+                     "real live stats & official lineups at kick-off."))
+    components.html(html, height=620, scrolling=False)
 
 
 def apisports_widget_panel():
@@ -1071,28 +1197,28 @@ def apisports_widget_panel():
 
     # --- auto-pin: all live games, else the next upcoming game -------------
     dkey = get_apif_data_key()
-    ids, live_mode, fetch_err = [], False, None
+    fixtures, live_mode, fetch_err = [], False, None
     if dkey:
         try:
-            ids = apif_live_fixture_ids(dkey)
-            live_mode = bool(ids)
-            if not ids:
-                ids = apif_next_fixture_ids(dkey, 1)
+            fixtures = apif_live_fixtures(dkey)
+            live_mode = bool(fixtures)
+            if not fixtures:
+                fixtures = apif_next_fixtures(dkey, 1)
         except Exception as e:  # noqa: BLE001
             fetch_err = str(e)
 
-    if ids:
+    if fixtures:
         cap = (("🔴 進行中——數據即時更新" if live_mode else "⏳ 下一場——開賽後自動切換")
                if zh else
                ("🔴 LIVE — stats updating" if live_mode
                 else "⏳ Next match — switches automatically at kick-off"))
         st.caption(cap)
-        for fid in ids[:3]:  # at most 3 simultaneous games
+        for fx in fixtures[:3]:  # at most 3 simultaneous games
             game_html = f"""
             <div id="wg-api-football-game"
                  data-host="v3.football.api-sports.io"
                  data-key="{wkey}"
-                 data-id="{fid}"
+                 data-id="{fx['id']}"
                  data-theme="dark"
                  data-refresh="60"
                  data-show-errors="false"
@@ -1101,6 +1227,9 @@ def apisports_widget_panel():
             {widget_js}
             """
             components.html(game_html, height=780, scrolling=True)
+        if not live_mode:
+            # pre-match: show watermarked layout preview until kick-off
+            demo_preview_panel(fixtures[0]["home"], fixtures[0]["away"])
     elif not dkey:
         st.info("再加 `APIFOOTBALL_KEY = \"...\"`（資料用主 key）即可自動釘選"
                 "進行中／下一場比賽的完整數據。" if zh else
@@ -1114,7 +1243,18 @@ def apisports_widget_panel():
                 "No live or upcoming fixtures found (free plans cannot query "
                 "season 2026 — resolves after upgrading).")
 
-    # --- full schedule list, tucked away ------------------------------------
+
+def full_schedule_panel():
+    """Full schedule list — rendered at the very bottom of the page."""
+    zh = st.session_state.get("lang", "中文") == "中文"
+    try:
+        wkey = (st.secrets.get("APIFOOTBALL_WIDGET_KEY", "")
+                or st.secrets.get("API_FOOTBALL_WIDGET_KEY", ""))
+        wseason = st.secrets.get("APIFOOTBALL_WIDGET_SEASON", "2026")
+    except Exception:
+        return
+    if not wkey:
+        return
     with st.expander("📋 完整賽程列表" if zh else "📋 Full schedule", False):
         list_html = f"""
         <div id="wg-api-football-games"
@@ -1131,7 +1271,8 @@ def apisports_widget_panel():
              data-modal-standings="true"
              data-modal-show-logos="true">
         </div>
-        {widget_js}
+        <script type="module"
+                src="https://widgets.api-sports.io/2.0.3/widgets.js"></script>
         """
         components.html(list_html, height=700, scrolling=True)
 
@@ -1483,6 +1624,7 @@ def dashboard():
         for m in finished[:6]:
             match_card(m)
 
+    full_schedule_panel()
     st.markdown(f'<p class="foot">{L("foot")}</p>', unsafe_allow_html=True)
 
 
