@@ -735,9 +735,10 @@ color:#7d93ab;text-transform:uppercase;margin-bottom:8px}
 .cd .match{color:#ffd84d;font-size:.95rem;font-weight:600;margin-bottom:8px}
 .digits{display:flex;gap:8px;justify-content:center}
 .dbox{background:rgba(10,18,30,.85);border:1px solid rgba(0,255,178,.3);
-border-radius:10px;padding:7px 0;min-width:62px;
+border-radius:10px;padding:7px 0;width:66px;flex:0 0 auto;
 box-shadow:0 0 14px rgba(0,255,178,.12)}
 .dnum{font-family:'Orbitron';font-size:1.55rem;color:#00ffb2;
+font-variant-numeric:tabular-nums;white-space:nowrap;
 text-shadow:0 0 12px rgba(0,255,178,.5)}
 .dlab{font-size:.68rem;color:#7d93ab;letter-spacing:1.5px;margin-top:2px}
 .kick{font-family:'Orbitron';font-size:1.5rem;color:#ffd84d;
@@ -746,14 +747,16 @@ animation:blink 1.2s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.45}}
 .cities{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .city{background:rgba(10,18,30,.85);border:1px solid rgba(0,170,255,.25);
-border-radius:10px;padding:7px 10px;min-width:88px}
-.cname{font-size:.74rem;color:#7d93ab;margin-bottom:2px}
-.ctime{font-family:'Orbitron';font-size:1.05rem;color:#00aaff;
+border-radius:10px;padding:7px 4px;width:108px;flex:0 0 auto}
+.cname{font-size:.74rem;color:#7d93ab;margin-bottom:2px;white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis}
+.ctime{font-family:'Orbitron';font-size:1.02rem;color:#00aaff;
+font-variant-numeric:tabular-nums;white-space:nowrap;
 text-shadow:0 0 10px rgba(0,170,255,.4)}
 .cflag{font-size:.85rem}
 @media(max-width:740px){
-.dbox{min-width:52px}.dnum{font-size:1.2rem}
-.city{min-width:80px;padding:6px 6px}.ctime{font-size:.92rem}}
+.dbox{width:56px}.dnum{font-size:1.2rem}
+.city{width:92px;padding:6px 2px}.ctime{font-size:.88rem}}
 </style></head><body>
 <div class="panel cd">
   <div class="lbl">__CD_TITLE__</div>
