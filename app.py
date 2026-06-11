@@ -11,6 +11,7 @@ Data sources:
 
 import json
 import math
+import os
 from datetime import datetime, timezone, timedelta
 
 import altair as alt
@@ -221,6 +222,13 @@ div[role="radiogroup"] label:has(input:checked) p {
 .kv { color:#8fa6bd; font-size:.92rem; }
 .kv b { color:#e8f1fa; }
 .foot { text-align:center; color:#51677e; margin-top:28px; font-size:.9rem; }
+
+/* AI showdown banner image */
+[data-testid="stImage"] img {
+    border-radius: 16px;
+    border: 1px solid rgba(255,216,77,.35);
+    box-shadow: 0 0 30px rgba(255,177,61,.25);
+}
 
 /* AI showdown row animations */
 .trophy {
@@ -1976,6 +1984,14 @@ def ai_competition_panel(finished: list):
                     table[k]["exact"] += 1
                 elif v == 1:
                     table[k]["outcome"] += 1
+
+    # ---- hero banner image (drop showdown_banner.png into assets/) ---------
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    for ext in ("png", "jpg", "jpeg", "webp"):
+        banner = os.path.join(app_dir, "assets", f"showdown_banner.{ext}")
+        if os.path.exists(banner):
+            st.image(banner, use_container_width=True)
+            break
 
     # ---- animated header + leaderboard (iframe component) ------------------
     ranked = sorted(AI_MODELS, key=lambda m: -table[m[0]]["pts"])
