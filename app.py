@@ -223,6 +223,36 @@ div[role="radiogroup"] label:has(input:checked) p {
 .kv b { color:#e8f1fa; }
 .foot { text-align:center; color:#51677e; margin-top:28px; font-size:.9rem; }
 
+/* THE FINAL spotlight */
+.final-card {
+    text-align: center; padding: 30px 24px; border-radius: 20px;
+    background: linear-gradient(160deg, rgba(255,200,0,.10), rgba(0,255,178,.05));
+    border: 2px solid rgba(255,216,77,.55);
+    animation: finalGlow 3s ease-in-out infinite;
+    margin-bottom: 16px;
+}
+@keyframes finalGlow {
+    0%, 100% { box-shadow: 0 0 22px rgba(255,216,77,.18); }
+    50% { box-shadow: 0 0 46px rgba(255,216,77,.45); }
+}
+.final-card .fc-pre { font-family:'Orbitron','Noto Sans TC'; font-size:.85rem;
+    letter-spacing:4px; color:#ffd84d; }
+.final-card .fc-teams { font-family:'Orbitron','Noto Sans TC';
+    font-size:2.1rem; color:#e8f1fa; margin:12px 0 6px; }
+.final-card .fc-teams img.flag { width:44px; height:32px; vertical-align:-5px; }
+.final-card .fc-vs { color:#ffd84d; font-size:1.5rem; padding:0 14px; }
+.news-a {
+    display:block; padding:9px 14px; margin:6px 0; border-radius:10px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.12);
+    color:#9db3ca !important; text-decoration:none !important;
+    font-size:.95rem; text-align:left;
+}
+.news-a:hover { border-color:rgba(255,216,77,.5); color:#ffd84d !important; }
+@media (max-width: 740px) {
+    .final-card .fc-teams { font-size:1.3rem; }
+    .final-card .fc-teams img.flag { width:30px; height:22px; }
+}
+
 /* AI showdown banner image */
 [data-testid="stImage"] img {
     border-radius: 16px;
@@ -1995,37 +2025,47 @@ def ai_competition_panel(finished: list):
             st.image(banner, use_container_width=True)
             break
 
-    # ---- animated header + leaderboard (iframe component) ------------------
+    # ---- everything below the banner lives in a collapsed expander ---------
     ranked = sorted(AI_MODELS, key=lambda m: -table[m[0]]["pts"])
-    top_pts = table[ranked[0][0]]["pts"]
-    cards = ""
-    for i, (key, name, icon, color) in enumerate(ranked):
-        t = table[key]
-        crown = ('<span class="crown">👑</span>'
-                 if (t["pts"] == top_pts and top_pts > 0) else "")
-        if zh:
-            detail = ("已結算 %d 場・全中 %d・猜中勝負 %d"
-                      % (t["played"], t["exact"], t["outcome"]))
-        else:
-            detail = ("%d settled · %d exact · %d outcome"
-                      % (t["played"], t["exact"], t["outcome"]))
-        cards += (
-            f'<div class="lbcard" style="--c:{color};'
-            f'animation-delay:{i * .18}s,{i * .18}s;">'
-            f'<div class="nm">{icon} {name} {crown}</div>'
-            f'<div class="pts" data-v="{t["pts"]}">0</div>'
-            f'<div class="dl">{detail}</div></div>')
-    head_html = (SHOWDOWN_HTML
-                 .replace("__TITLE__",
-                          "AI 預測比分大對決" if zh
-                          else "AI Score-Prediction Showdown")
-                 .replace("__SUB__",
-                          "Gemini vs ChatGPT vs Claude — 72 場小組賽全預測・"
-                          "全中 3 分・猜中勝負 1 分" if zh else
-                          "Gemini vs ChatGPT vs Claude — all 72 group games · "
-                          "exact 3 pts · outcome 1 pt")
-                 .replace("__CARDS__", cards))
-    components.html(head_html, height=300, scrolling=False)
+    leader = ranked[0]
+    exp_title = (f"🏆 AI 對決完整紀錄 — 目前領先：{leader[2]} {leader[1]} "
+                 f"{table[leader[0]]['pts']} 分（點開看 72 場結算）" if zh else
+                 f"🏆 AI Showdown full record — leader: {leader[2]} "
+                 f"{leader[1]} {table[leader[0]]['pts']} pts (tap to expand)")
+    with st.expander(exp_title, expanded=False):
+        top_pts = table[ranked[0][0]]["pts"]
+        cards = ""
+        for i, (key, name, icon, color) in enumerate(ranked):
+            t = table[key]
+            crown = ('<span class="crown">👑</span>'
+                     if (t["pts"] == top_pts and top_pts > 0) else "")
+            if zh:
+                detail = ("已結算 %d 場・全中 %d・猜中勝負 %d"
+                          % (t["played"], t["exact"], t["outcome"]))
+            else:
+                detail = ("%d settled · %d exact · %d outcome"
+                          % (t["played"], t["exact"], t["outcome"]))
+            cards += (
+                f'<div class="lbcard" style="--c:{color};'
+                f'animation-delay:{i * .18}s,{i * .18}s;">'
+                f'<div class="nm">{icon} {name} {crown}</div>'
+                f'<div class="pts" data-v="{t["pts"]}">0</div>'
+                f'<div class="dl">{detail}</div></div>')
+        head_html = (SHOWDOWN_HTML
+                     .replace("__TITLE__",
+                              "AI 預測比分大對決" if zh
+                              else "AI Score-Prediction Showdown")
+                     .replace("__SUB__",
+                              "Gemini vs ChatGPT vs Claude — 72 場小組賽全預測・"
+                              "全中 3 分・猜中勝負 1 分" if zh else
+                              "Gemini vs ChatGPT vs Claude — all 72 group "
+                              "games · exact 3 pts · outcome 1 pt")
+                     .replace("__CARDS__", cards))
+        components.html(head_html, height=300, scrolling=False)
+        _ai_rows(settled, zh)
+
+
+def _ai_rows(settled: dict, zh: bool):
 
     # ---- per-group prediction rows ------------------------------------------
     tabs = st.tabs([f"Group {g}" for g in AI_PRED])
@@ -2078,6 +2118,95 @@ def ai_competition_panel(finished: list):
         "Gemini/ChatGPT predictions collected by the site owner (2026-06-11); "
         "Claude predictions generated by this site's AI. For fun only — "
         "not betting advice.")
+
+
+# ----------------------------------------------------------------------------
+# 🏆 THE FINAL — spotlight panel (Argentina vs Spain, 19 Jul, MetLife)
+# ----------------------------------------------------------------------------
+FINAL_NEWS = [
+    ("Squawka — 決賽預測：賠率與預計陣容",
+     "Squawka — Final prediction: odds & lineups",
+     "https://www.squawka.com/us/news/world-cup/world-cup-2026-final-predictions/"),
+    ("Al Jazeera — 兩隊的晉級決賽之路",
+     "Al Jazeera — Road to the final",
+     "https://www.aljazeera.com/news/2026/7/15/fifa-world-cup-brackets-teams-predictions-schedule-and-road-to-the-final"),
+    ("Yahoo Sports — 決賽日期、時間與地點",
+     "Yahoo Sports — Final date, time & venue",
+     "https://sports.yahoo.com/articles/world-cup-final-2026-date-070631773.html"),
+    ("ESPN — 完整賽程與賽果總覽",
+     "ESPN — Full fixtures & results",
+     "https://www.espn.com/soccer/story/_/id/48939282/2026-fifa-world-cup-fixtures-results-match-schedule-group-stage-knockout-rounds-bracket"),
+]
+
+
+def _loose_odds(team: str, odds_map: dict) -> float:
+    if team in odds_map:
+        return odds_map[team]
+    tl = (team or "").lower()
+    for k, v in odds_map.items():
+        if tl and (tl in k.lower() or k.lower() in tl):
+            return v
+    return 0.005
+
+
+def final_panel(m: dict, odds_map: dict, rates: dict):
+    zh = st.session_state.get("lang", "中文") == "中文"
+    home = (m.get("homeTeam") or {}).get("name") or "TBD"
+    away = (m.get("awayTeam") or {}).get("name") or "TBD"
+    when = datetime.fromisoformat(m["utcDate"].replace("Z", "+00:00"))
+    venue = m.get("venue") or "MetLife Stadium, New Jersey"
+    ph, pa = _loose_odds(home, odds_map), _loose_odds(away, odds_map)
+    pred = predict_score(ph, pa, home, away, rates)
+    sh, sa = pred["score"]
+    w, dr, lo = pred["win"] * 100, pred["draw"] * 100, pred["loss"] * 100
+
+    pre = "🏆 WORLD CUP 2026 · THE FINAL" if zh else \
+          "🏆 WORLD CUP 2026 · THE FINAL"
+    road = ("晉級之路 — 西班牙半決賽 2-0 淘汰法國；阿根廷 2-1 力克英格蘭（衛冕軍）"
+            if zh else
+            "Road to the final — Spain beat France 2-0; holders Argentina "
+            "edged England 2-1")
+    pred_lbl = "AI 預測比分（Poisson 模型）" if zh else \
+               "AI predicted score (Poisson model)"
+    wdl = (f"{home} 勝 {w:.0f}% ・ 90 分鐘和局 {dr:.0f}% ・ {away} 勝 {lo:.0f}%"
+           if zh else
+           f"{home} win {w:.0f}% · draw (90') {dr:.0f}% · {away} win {lo:.0f}%")
+    odds_line = (f"Polymarket 奪冠機率 — {home}：{ph*100:.1f}%・"
+                 f"{away}：{pa*100:.1f}%" if zh else
+                 f"Polymarket title odds — {home}: {ph*100:.1f}% · "
+                 f"{away}: {pa*100:.1f}%")
+    news_hd = "📰 決賽焦點新聞" if zh else "📰 Final headlines"
+    news = "".join(
+        f'<a class="news-a" href="{url}" target="_blank">🔗 '
+        f'{zh_t if zh else en_t}</a>'
+        for zh_t, en_t, url in FINAL_NEWS)
+
+    section("THE FINAL", "🔥 " + ("決賽聚焦" if zh else "Final spotlight"))
+    st.markdown(
+        f"""<div class="final-card">
+        <div class="fc-pre">{pre}</div>
+        <div class="fc-teams">{flag(home)} {home}
+            <span class="fc-vs">VS</span> {away} {flag(away)}</div>
+        <div class="kv" style="font-size:1.05rem;">🗓
+            <b>{fmt_dt(when, long=True)}</b> · 🏟 {venue}</div>
+        <div class="kv" style="margin-top:6px;">{road}</div>
+        <div style="margin:18px 0 4px;color:#8fa6bd;font-size:.85rem;
+            letter-spacing:2px;">{pred_lbl}</div>
+        <div style="font-family:'Orbitron';font-size:2.6rem;color:#00ffb2;
+            text-shadow:0 0 22px rgba(0,255,178,.5);">{sh} : {sa}</div>
+        <div style="display:flex;height:14px;border-radius:999px;
+            overflow:hidden;margin:12px 10%;border:1px solid rgba(255,255,255,.12);">
+          <div style="width:{w:.1f}%;background:linear-gradient(90deg,#75aadb,#4e8cff);"></div>
+          <div style="width:{dr:.1f}%;background:rgba(255,255,255,.18);"></div>
+          <div style="width:{lo:.1f}%;background:linear-gradient(90deg,#cc9900,#ffd84d);"></div>
+        </div>
+        <div class="kv">{wdl}</div>
+        <div class="kv" style="margin-top:8px;">{odds_line}</div>
+        <div style="margin-top:18px;text-align:left;">
+          <div style="color:#ffd84d;font-weight:700;margin-bottom:6px;">
+            {news_hd}</div>{news}</div>
+        </div>""",
+        unsafe_allow_html=True)
 
 
 def _match_named(m: dict) -> bool:
@@ -2189,20 +2318,22 @@ def standings_table_html(table: list) -> str:
 
 
 def standings_panel(standings: dict):
-    section("GROUP STAGE", L("standings_title"))
+    zh = st.session_state.get("lang", "中文") == "中文"
     tables = [s for s in standings.get("standings", [])
               if s.get("type") == "TOTAL"]
     if not tables:
-        st.info(L("standings_info"))
         return
-    tabs = st.tabs([s.get("group", f"G{i}").replace("GROUP_", "Group ")
-                    for i, s in enumerate(tables)])
-    for tab, s in zip(tabs, tables):
-        with tab:
-            st.markdown(standings_table_html(s.get("table", [])),
-                        unsafe_allow_html=True)
-    st.markdown(f'<div class="legend">{L("legend")}</div>',
-                unsafe_allow_html=True)
+    with st.expander("📊 " + ("小組賽最終積分榜（點開看全部 12 組）" if zh else
+                              "Final group standings (tap for all 12 groups)"),
+                     expanded=False):
+        tabs = st.tabs([s.get("group", f"G{i}").replace("GROUP_", "Group ")
+                        for i, s in enumerate(tables)])
+        for tab, s in zip(tabs, tables):
+            with tab:
+                st.markdown(standings_table_html(s.get("table", [])),
+                            unsafe_allow_html=True)
+        st.markdown(f'<div class="legend">{L("legend")}</div>',
+                    unsafe_allow_html=True)
 
 
 # ----------------------------------------------------------------------------
@@ -2261,9 +2392,15 @@ def dashboard():
     with c2:
         odds_panel(odds, odds_live)
 
-    ai_competition_panel(finished)   # ⭐ AI showdown (replaces odds history)
+    rates = team_goal_rates(standings)
+    final_m = next((m for m in upcoming
+                    if _match_named(m) and m.get("stage") == "FINAL"), None)
+    if final_m:
+        final_panel(final_m, odds_map, rates)   # 🔥 all eyes on the final
+    ai_competition_panel(finished)   # ⭐ AI showdown (collapsed, banner stays)
     apisports_widget_panel()
-    next_match_panel(upcoming, odds_map, team_goal_rates(standings))
+    if not final_m:
+        next_match_panel(upcoming, odds_map, rates)
     # tactics_panel(upcoming[0], odds_map)  # disabled — re-enable anytime
     standings_panel(standings)
 
