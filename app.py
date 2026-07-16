@@ -1571,7 +1571,8 @@ def clock_panel(next_match=None):
     zh = st.session_state.get("lang", "中文") == "中文"
     if next_match:
         target = next_match["utcDate"]
-        h, a = next_match["homeTeam"]["name"], next_match["awayTeam"]["name"]
+        h = (next_match.get("homeTeam") or {}).get("name") or "TBD"
+        a = (next_match.get("awayTeam") or {}).get("name") or "TBD"
         match_lbl = f"{h} vs {a}"
     else:
         target = OPENING_UTC
@@ -1647,7 +1648,8 @@ def stat_strip(live_n: int, today_n: int, fav: str, fav_p: float):
 
 
 def match_card(m: dict):
-    home, away = m["homeTeam"]["name"], m["awayTeam"]["name"]
+    home = (m.get("homeTeam") or {}).get("name") or "TBD"
+    away = (m.get("awayTeam") or {}).get("name") or "TBD"
     status = m.get("status", "")
     ft = m.get("score", {}).get("fullTime", {})
     hs, as_ = ft.get("home"), ft.get("away")
@@ -2078,20 +2080,27 @@ def ai_competition_panel(finished: list):
         "not betting advice.")
 
 
+def _match_named(m: dict) -> bool:
+    """True when both team names are known (knockout TBD slots are None)."""
+    return bool((m.get("homeTeam") or {}).get("name")
+                and (m.get("awayTeam") or {}).get("name"))
+
+
 def next_match_panel(upcoming: list, odds_map: dict, rates: dict = None):
     section("NEXT UP", L("next_title"))
-    if not upcoming:
+    named = [m for m in upcoming if _match_named(m)]
+    if not named:
         st.info(L("no_fixtures"))
         return
-    nxt = upcoming[0]
+    nxt = named[0]
     home, away = nxt["homeTeam"]["name"], nxt["awayTeam"]["name"]
 
     def title_odds(team):
         if team in odds_map:
             return odds_map[team]
-        tl = team.lower()
+        tl = (team or "").lower()
         for k, v in odds_map.items():
-            if tl in k.lower() or k.lower() in tl:
+            if tl and (tl in k.lower() or k.lower() in tl):
                 return v
         return 0.005
 
@@ -2155,7 +2164,7 @@ def next_match_panel(upcoming: list, odds_map: dict, rates: dict = None):
         <div class="kv" style="margin-top:8px;color:#51677e;">{meth}</div>
         </div>""",
         unsafe_allow_html=True)
-    for m in upcoming[1:6]:
+    for m in named[1:6]:
         match_card(m)
 
 
